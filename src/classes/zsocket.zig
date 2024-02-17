@@ -9,7 +9,8 @@ pub const ZSocketType = enum(c_int) {
     Pair = c.ZMQ_PAIR,
 };
 
-//
+/// System level socket, which allows for opening outgoing and
+/// accepting incoming connections.
 pub const ZSocket = struct {
     allocator: std.mem.Allocator,
     selfArena: std.heap.ArenaAllocator,
@@ -45,25 +46,25 @@ pub const ZSocket = struct {
         return r;
     }
 
-    //  Bind a socket to a endpoint. For tcp:// endpoints, supports
-    //  ephemeral ports, if you specify the port number as "*". By default
-    //  zsock uses the IANA designated range from C000 (49152) to FFFF (65535).
-    //  To override this range, follow the "*" with "[first-last]". Either or
-    //  both first and last may be empty. To bind to a random port within the
-    //  range, use "!" in place of "*".
-    //
-    //  Examples:
-    //      tcp://127.0.0.1:*           bind to first free port from C000 up
-    //      tcp://127.0.0.1:!           bind to random port from C000 to FFFF
-    //      tcp://127.0.0.1:*[60000-]   bind to first free port from 60000 up
-    //      tcp://127.0.0.1:![-60000]   bind to random port from C000 to 60000
-    //      tcp://127.0.0.1:![55000-55999] bind to random port from 55000 to 55999
-    //
-    //  On success, returns the actual port number used, for tcp:// endpoints,
-    //  and 0 for other transports. Note that when using
-    //  ephemeral ports, a port may be reused by different services without
-    //  clients being aware. Protocols that run on ephemeral ports should take
-    //  this into account.
+    ///  Bind a socket to a endpoint. For tcp:// endpoints, supports
+    ///  ephemeral ports, if you specify the port number as "*". By default
+    ///  zsock uses the IANA designated range from C000 (49152) to FFFF (65535).
+    ///  To override this range, follow the "*" with "[first-last]". Either or
+    ///  both first and last may be empty. To bind to a random port within the
+    ///  range, use "!" in place of "*".
+    ///
+    ///  Examples:
+    ///      tcp://127.0.0.1:*           bind to first free port from C000 up
+    ///      tcp://127.0.0.1:!           bind to random port from C000 to FFFF
+    ///      tcp://127.0.0.1:*[60000-]   bind to first free port from 60000 up
+    ///      tcp://127.0.0.1:![-60000]   bind to random port from C000 to 60000
+    ///      tcp://127.0.0.1:![55000-55999] bind to random port from 55000 to 55999
+    ///
+    ///  On success, returns the actual port number used, for tcp:// endpoints,
+    ///  and 0 for other transports. Note that when using
+    ///  ephemeral ports, a port may be reused by different services without
+    ///  clients being aware. Protocols that run on ephemeral ports should take
+    ///  this into account.
     pub fn bind(self: *ZSocket, ep: []const u8) !u16 {
         const epZ = try self.allocator.dupeZ(u8, ep);
         defer self.allocator.free(epZ);
@@ -87,7 +88,10 @@ pub const ZSocket = struct {
         return @intCast(result);
     }
 
-    // Connect a socket to an endpoint
+    /// Connect a socket to an endpoint
+    ///
+    ///  Examples:
+    ///      tcp://127.0.0.1:54321
     pub fn connect(self: *ZSocket, ep: []const u8) !void {
         const epZ = try self.allocator.dupeZ(u8, ep);
         defer self.allocator.free(epZ);
@@ -107,7 +111,7 @@ pub const ZSocket = struct {
         self.endpoint = try selfAllocator.dupe(u8, ep); // copy to managed memory
     }
 
-    // Destroy the socket and clean up
+    /// Destroy the socket and clean up
     pub fn deinit(self: *ZSocket) void {
         var socket: ?*c.zsock_t = self.socket;
 
