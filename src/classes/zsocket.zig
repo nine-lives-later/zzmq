@@ -195,32 +195,57 @@ pub const ZSocket = struct {
 
     /// Send a frame to a socket.
     ///
+    /// Note: The frame will lose ownership and become invalid, unless `options.reuse` is true.
+    ///
     /// Example:
     ///       var frame = try ZFrame.init(data);
     ///       defer frame.deinit();
     ///
     ///       try socket.send(&frame, .{});
-    pub fn send(self: *ZSocket, frame: *const zframe.ZFrame, options: struct {
+    pub fn send(self: *ZSocket, frame: *zframe.ZFrame, options: struct {
+        /// Indicates that this frame is part of a multi-part message
+        /// and more frames will be sent.
+        ///
+        /// On the receiving side, will cause `frame.hasMore()` to return true.
         more: bool = false,
+
+        /// Indicates that the provided frame shall not loose
+        /// ownership over its data.
+        ///
+        /// Important: This requires the frame data to live as long
+        ///            as it takes for the frame to be sent.
+        ///            Consider setting `dontwait` to true.
+        reuse: bool = false,
+
+        /// Do not wait for the frame to be sent, but return immediately.
         dontwait: bool = false,
     }) !void {
         var f: ?*c.zframe_t = frame.frame;
 
-        var flags: c_int = c.ZFRAME_REUSE;
+        var flags: c_int = 0;
         if (options.more) flags |= c.ZFRAME_MORE;
+        if (options.reuse) flags |= c.ZFRAME_REUSE;
         if (options.dontwait) flags |= c.ZFRAME_DONTWAIT;
 
         const result = c.zframe_send(&f, self.socket, flags);
         if (result < 0) {
             return error.SendFrameFailed;
         }
+
+        // frame lost ownership of internal object
+        if (!options.reuse) {
+            frame.frameOwned = false;
+        }
     }
 
-    /// Receive frame from socket, returns zframe_t object or NULL if the recv
-    /// was interrupted. Does a blocking recv, if you want to not block then use
+    /// Receive a single frame of a message from the socket.
+    /// Does a blocking recv, if you want to not block then use
     /// zpoller or zloop.
     ///
     /// The caller must invoke `deinit()` on the returned frame.
+    ///
+    /// If receiving a multi-part message, then `frame.hasMore()` will return true
+    /// and the another receive call should be invoked.
     ///
     /// Example:
     ///       var frame = try socket.receive();
@@ -274,15 +299,31 @@ test "ZSocket - bind and connect" {
 
     var outgoingData = try zframe.ZFrame.init(msg);
     defer outgoingData.deinit();
-    try std.testing.expectEqual(msg.len, outgoingData.size());
-    try std.testing.expectEqualStrings(msg, outgoingData.data());
+    try std.testing.expectEqual(true, outgoingData.frameOwned);
+    try std.testing.expectEqual(msg.len, try outgoingData.size());
+    try std.testing.expectEqualStrings(msg, try outgoingData.data());
 
+    // send the first frame
+    try outgoing.send(&outgoingData, .{ .dontwait = true, .reuse = true, .more = true });
+    try std.testing.expectEqual(true, outgoingData.frameOwned);
+
+    // send the second frame (reusing the previous one)
     try outgoing.send(&outgoingData, .{ .dontwait = true });
+    try std.testing.expectEqual(false, outgoingData.frameOwned);
 
-    // receive the message
+    // receive the first frame of the message
     var incomingData = try incoming.receive();
     defer incomingData.deinit();
 
-    try std.testing.expectEqual(msg.len, incomingData.size());
-    try std.testing.expectEqualStrings(msg, incomingData.data());
+    try std.testing.expectEqual(msg.len, try incomingData.size());
+    try std.testing.expectEqualStrings(msg, try incomingData.data());
+    try std.testing.expectEqual(true, try incomingData.hasMore());
+
+    // receive the second frame
+    var incomingData2 = try incoming.receive();
+    defer incomingData2.deinit();
+
+    try std.testing.expectEqual(msg.len, try incomingData2.size());
+    try std.testing.expectEqualStrings(msg, try incomingData2.data());
+    try std.testing.expectEqual(false, try incomingData2.hasMore());
 }
