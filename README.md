@@ -6,6 +6,8 @@ It is implemented as a wrapper of the "High-level C Binding for ZeroMQ" ([CZMQ](
 
 **IMPORTANT: The library is currently still work in progress!!**
 
+[![Unit Tests](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml)
+
 ## Using the Library
 
 ### Minimal Example
@@ -75,9 +77,9 @@ sudo apt install libczmq
 
 There are branches for the supported Zig versions:
 
-| Branch | Zig Version   | Comment |
-| --- |---------------| --- |
-| `main` | Zig v0.11.x  | The latest unreleased version for Zig 0.11. |
+| Branch | Zig Version   | Status | Comment |
+| --- |---------------| --- | --- |
+| `main` | Zig v0.11.x  | [![Unit Tests](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml) | The latest unreleased version for Zig 0.11. |
 
 Please use a specific [release tag](https://github.com/nine-lives-later/zzmq/tags) for including the library into your project.
 
