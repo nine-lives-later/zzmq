@@ -251,7 +251,7 @@ pub const ZSocket = struct {
     ///       var frame = try socket.receive();
     ///       defer frame.deinit();
     ///
-    ///       const data = frame.data();
+    ///       const data = try frame.data();
     pub fn receive(self: *ZSocket) !zframe.ZFrame {
         var frame = c.zframe_recv(self.socket);
         if (frame == null) {
