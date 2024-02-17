@@ -124,7 +124,10 @@ Based on the work of [CZMQ](http://czmq.zeromq.org), inspired by [goczmq](https:
 
 ## License
 
-Published under the [MIT license](LICENSE).
+Published under the [Mozilla Public License 2.0](https://www.mozilla.org/en-US/MPL/2.0/).
 
-Please keep in mind that this library depends on [CZMQ](http://czmq.zeromq.org) and [libzmq](https://github.com/zeromq/libzmq) which are published under their own respective license.
-They are being used as dynamically linked libraries (`libczmq.so`, `libzmq.so`), which should be fine.
+- Static linking is allowed.
+- Safe for use in close-source applications.
+- You do not need a commercial license.
+
+Feel free to also see the [ZeroMQ licensing terms](http://zeromq.wikidot.com/area:licensing).
