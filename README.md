@@ -17,7 +17,7 @@ Since this library is basically a 1:1 wrapper of CZMQ, please refer to the [CZMQ
 ```zig
 const zzmq = @import("zzmq");
 
-var s = try zzmq.zsocket.ZSocket.init(allocator, zzmq.zsocket.ZSocketType.Pair);
+var s = try zzmq.ZSocket.init(allocator, zzmq.ZSocketType.Pair);
 defer s.deinit();
 
 const port = try s.bind("tcp://127.0.0.1:!");

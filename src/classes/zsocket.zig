@@ -1,9 +1,6 @@
 const std = @import("std");
-
-const c = @cImport({
-    @cInclude("czmq.h");
-    @cInclude("string.h");
-});
+const zframe = @import("zframe.zig");
+const c = @import("../czmq.zig").c;
 
 pub const ZSocketType = enum(c_int) {
     /// A socket of type ZMQ_PAIR can only be connected to a single peer at any one time.
@@ -196,6 +193,49 @@ pub const ZSocket = struct {
         self.endpoint = try selfAllocator.dupe(u8, ep); // copy to managed memory
     }
 
+    /// Send a frame to a socket.
+    ///
+    /// Example:
+    ///       var frame = try ZFrame.init(data);
+    ///       defer frame.deinit();
+    ///
+    ///       try socket.send(&frame, .{});
+    pub fn send(self: *ZSocket, frame: *const zframe.ZFrame, options: struct {
+        more: bool = false,
+        dontwait: bool = false,
+    }) !void {
+        var f: ?*c.zframe_t = frame.frame;
+
+        var flags: c_int = c.ZFRAME_REUSE;
+        if (options.more) flags |= c.ZFRAME_MORE;
+        if (options.dontwait) flags |= c.ZFRAME_DONTWAIT;
+
+        const result = c.zframe_send(&f, self.socket, flags);
+        if (result < 0) {
+            return error.SendFrameFailed;
+        }
+    }
+
+    /// Receive frame from socket, returns zframe_t object or NULL if the recv
+    /// was interrupted. Does a blocking recv, if you want to not block then use
+    /// zpoller or zloop.
+    ///
+    /// The caller must invoke `deinit()` on the returned frame.
+    ///
+    /// Example:
+    ///       var frame = try socket.receive();
+    ///       defer frame.deinit();
+    ///
+    ///       const data = frame.data();
+    pub fn receive(self: *ZSocket) !zframe.ZFrame {
+        var frame = c.zframe_recv(self.socket);
+        if (frame == null) {
+            return error.ReceiveFrameInterrupted;
+        }
+
+        return zframe.ZFrame{ .frame = frame.? };
+    }
+
     /// Destroy the socket and clean up
     pub fn deinit(self: *ZSocket) void {
         var socket: ?*c.zsock_t = self.socket;
@@ -228,4 +268,21 @@ test "ZSocket - bind and connect" {
 
     try outgoing.connect(endpoint);
     try std.testing.expect(outgoing.endpoint != null);
+
+    // send a message
+    const msg = "hello world";
+
+    var outgoingData = try zframe.ZFrame.init(msg);
+    defer outgoingData.deinit();
+    try std.testing.expectEqual(msg.len, outgoingData.size());
+    try std.testing.expectEqualStrings(msg, outgoingData.data());
+
+    try outgoing.send(&outgoingData, .{ .dontwait = true });
+
+    // receive the message
+    var incomingData = try incoming.receive();
+    defer incomingData.deinit();
+
+    try std.testing.expectEqual(msg.len, incomingData.size());
+    try std.testing.expectEqualStrings(msg, incomingData.data());
 }
