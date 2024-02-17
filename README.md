@@ -50,7 +50,7 @@ try socket.connect(endpoint);
 var frame = try socket.receive();
 defer frame.deinit();
 
-const data = frame.data();
+const data = try frame.data();
 ```
 
 
