@@ -13,13 +13,24 @@ pub const ZFrame = struct {
         };
     }
 
+    /// Creates an empty frame, e.g. for delimiter frames.
+    pub fn initEmpty() !ZFrame {
+        return ZFrame{
+            .frame = c.zframe_new_empty() orelse return error.FrameAllocFailed,
+        };
+    }
+
     /// Retrieves a slice to the data stored within the frame.
     ///
     /// Example:
     ///    allocator.dupe(u8, frame.data());
     pub fn data(self: *const ZFrame) []const u8 {
-        const d = c.zframe_data(self.frame);
         const s = c.zframe_size(self.frame);
+        if (s <= 0) {
+            return "";
+        }
+
+        const d = c.zframe_data(self.frame);
 
         return d[0..s];
     }
@@ -59,4 +70,19 @@ test "ZFrame - create and destroy" {
 
     try std.testing.expectEqual(msg.len, clone.size());
     try std.testing.expectEqualStrings(msg, clone.data());
+}
+
+test "ZFrame - empty and destroy" {
+    var data = try ZFrame.initEmpty();
+    defer data.deinit();
+
+    try std.testing.expectEqual(@as(usize, 0), data.size());
+    try std.testing.expectEqualStrings("", data.data());
+
+    // create and test a clone
+    var clone = try data.clone();
+    defer clone.deinit();
+
+    try std.testing.expectEqual(@as(usize, 0), clone.size());
+    try std.testing.expectEqualStrings("", clone.data());
 }
