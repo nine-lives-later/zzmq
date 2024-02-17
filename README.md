@@ -13,17 +13,46 @@ It is implemented as a wrapper of the "High-level C Binding for ZeroMQ" ([CZMQ](
 ### Minimal Example
 
 Since this library is basically a 1:1 wrapper of CZMQ, please refer to the [CZMQ documentation](http://czmq.zeromq.org) to get a better understanding on how the library works.
+Please feel free to also have a look at the various unit tests in this library (esp. [ZSocket](src/classes/zsocket.zig)).
+
+Running the server:
 
 ```zig
 const zzmq = @import("zzmq");
 
-var s = try zzmq.ZSocket.init(allocator, zzmq.ZSocketType.Pair);
-defer s.deinit();
+var socket = try zzmq.ZSocket.init(allocator, zzmq.ZSocketType.Pair);
+defer socket.deinit();
 
-const port = try s.bind("tcp://127.0.0.1:!");
+const port = try socket.bind("tcp://127.0.0.1:!");
+
+// send a message
+var frame = try zzmq.ZFrame.init(data);
+defer frame.deinit();
+
+try socket.send(&frame, .{});
 ```
 
-Please feel free to also have a look at the various unit tests in this library.
+Running the client:
+
+
+```zig
+const zzmq = @import("zzmq");
+
+var socket = try zzmq.ZSocket.init(allocator, zzmq.ZSocketType.Pair);
+defer socket.deinit();
+
+const endpoint = try std.fmt.allocPrint(allocator, "tcp://127.0.0.1:{}", .{port});
+defer allocator.free(endpoint);
+
+try socket.connect(endpoint);
+
+// receive a message
+var frame = try socket.receive();
+defer frame.deinit();
+
+const data = frame.data();
+```
+
 
 ### Adding to build process
 
