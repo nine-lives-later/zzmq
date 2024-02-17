@@ -121,4 +121,7 @@ test "ZFrame - ownership lost" {
     try std.testing.expectError(error.FrameOwnershipLost, data.data());
     try std.testing.expectError(error.FrameOwnershipLost, data.clone());
     try std.testing.expectError(error.FrameOwnershipLost, data.hasMore());
+
+    // restore ownership to not leak memory
+    data.frameOwned = true;
 }

@@ -273,7 +273,7 @@ pub const ZSocket = struct {
     }
 };
 
-test "ZSocket - bind and connect" {
+test "ZSocket - roundtrip" {
     const allocator = std.testing.allocator;
 
     // bind the incoming socket
@@ -326,4 +326,65 @@ test "ZSocket - bind and connect" {
     try std.testing.expectEqual(msg.len, try incomingData2.size());
     try std.testing.expectEqualStrings(msg, try incomingData2.data());
     try std.testing.expectEqual(false, try incomingData2.hasMore());
+}
+
+test "ZSocket - roundtrip json" {
+    const allocator = std.testing.allocator;
+
+    // bind the incoming socket
+    var incoming = try ZSocket.init(allocator, ZSocketType.Pair);
+    defer incoming.deinit();
+
+    const port = try incoming.bind("tcp://127.0.0.1:!");
+    try std.testing.expect(port >= 0xC000);
+
+    // connect to the socket
+    var outgoing = try ZSocket.init(allocator, ZSocketType.Pair);
+    defer outgoing.deinit();
+
+    const endpoint = try std.fmt.allocPrint(allocator, "tcp://127.0.0.1:{}", .{port});
+    defer allocator.free(endpoint);
+
+    try outgoing.connect(endpoint);
+
+    // send a message
+    const Obj = struct {
+        hello: []const u8,
+        everything: i32,
+        ten: []const u16,
+    };
+
+    const outgoingObj = Obj{
+        .hello = "world",
+        .everything = 42,
+        .ten = &[_]u16{
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+        },
+    };
+
+    const msg = try std.json.stringifyAlloc(allocator, &outgoingObj, .{});
+    defer allocator.free(msg);
+
+    var outgoingData = try zframe.ZFrame.init(msg);
+    defer outgoingData.deinit();
+
+    try outgoing.send(&outgoingData, .{ .dontwait = true });
+
+    // receive the first frame of the message
+    var incomingData = try incoming.receive();
+    defer incomingData.deinit();
+
+    const incomingObj = try std.json.parseFromSlice(Obj, allocator, try incomingData.data(), .{});
+    defer incomingObj.deinit();
+
+    try std.testing.expectEqualDeep(outgoingObj, incomingObj.value);
 }
