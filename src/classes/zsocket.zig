@@ -93,6 +93,9 @@ pub const ZSocketType = enum(c_int) {
 
 /// System level socket, which allows for opening outgoing and
 /// accepting incoming connections.
+///
+/// It is either used to *bind* to a local port, or *connect*
+/// to a remote (or local) port.
 pub const ZSocket = struct {
     allocator: std.mem.Allocator,
     selfArena: std.heap.ArenaAllocator,
@@ -147,6 +150,14 @@ pub const ZSocket = struct {
     ///  ephemeral ports, a port may be reused by different services without
     ///  clients being aware. Protocols that run on ephemeral ports should take
     ///  this into account.
+    ///
+    /// Example:
+    ///   var socket = ZSocket.init(ZSocketType.Pair);
+    ///   defer socket.deinit();
+    ///
+    ///   const port = try socket.bind("tcp://127.0.0.1:!");
+    ///
+    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_bind.html .
     pub fn bind(self: *ZSocket, ep: []const u8) !u16 {
         const epZ = try self.allocator.dupeZ(u8, ep);
         defer self.allocator.free(epZ);
@@ -172,8 +183,13 @@ pub const ZSocket = struct {
 
     /// Connect a socket to an endpoint
     ///
-    ///  Examples:
-    ///      tcp://127.0.0.1:54321
+    /// Example:
+    ///   var socket = ZSocket.init(ZSocketType.Pair);
+    ///   defer socket.deinit();
+    ///
+    ///   try socket.connect("tcp://127.0.0.1:54321");
+    ///
+    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_connect.html .
     pub fn connect(self: *ZSocket, ep: []const u8) !void {
         const epZ = try self.allocator.dupeZ(u8, ep);
         defer self.allocator.free(epZ);
