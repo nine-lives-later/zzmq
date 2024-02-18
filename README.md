@@ -61,14 +61,15 @@ Add to the `build.zig.zon` file, e.g. for Zig 0.11:
 ```zig
 .{
     .dependencies = .{
-        .clap = .{
-            .url = "https://github.com/nine-lives-later/zzmq/archive/refs/tags/0.1.0-zig.tar.gz",
+        .zzmq = .{
+            .url = "https://github.com/nine-lives-later/zzmq/archive/refs/tags/v0.1.0-zig0.11.tar.gz",
+            .hash = "122080e22e9823dc0a4567c71553c4884978a33877c9b3d46f4594ca5f299d534f9b",
         },
     },
 }
 ```
 
-Note: When adding the URL only, the compiler will generate an error regarding the missing `.hash` field, and will also provide the correct value for it. Starting with Zig 0.12 you can also use `zig fetch`.
+Note: Should the hash be wrong, remove the `.hash` field and the compiler error will show the correct value. Starting with Zig 0.12 you can also use `zig fetch zzmq <url>`.
 
 It is also required to add it to the `build.zig` file:
 
