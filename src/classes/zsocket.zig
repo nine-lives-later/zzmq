@@ -7,7 +7,7 @@ pub const ZSocketType = enum(c_int) {
     ///
     /// No message routing or filtering is performed on messages sent over a ZMQ_PAIR socket.
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_socket.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_socket.html .
     Pair = c.ZMQ_PAIR,
 
     /// A socket of type ZMQ_PUB is used by a publisher to distribute data.
@@ -15,7 +15,7 @@ pub const ZSocketType = enum(c_int) {
     /// Messages sent are distributed in a fan out fashion to all connected peers.
     /// The zmq_recv function is not implemented for this socket type.
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_socket.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_socket.html .
     Pub = c.ZMQ_PUB,
 
     /// A socket of type ZMQ_SUB is used by a subscriber to subscribe to data distributed by a publisher.
@@ -24,21 +24,21 @@ pub const ZSocketType = enum(c_int) {
     /// of zmq_setsockopt to specify which messages to subscribe to.
     /// The zmq_send() function is not implemented for this socket type.
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_socket.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_socket.html .
     Sub = c.ZMQ_SUB,
 
     /// Same as ZMQ_PUB except that you can receive subscriptions from the peers in form of incoming messages.
     ///
     /// Subscription message is a byte 1 (for subscriptions) or byte 0 (for unsubscriptions) followed by the subscription body.
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_socket.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_socket.html .
     XPub = c.ZMQ_XPUB,
 
     /// Same as ZMQ_SUB except that you subscribe by sending subscription messages to the socket.
     ///
     /// Subscription message is a byte 1 (for subscriptions) or byte 0 (for unsubscriptions) followed by the subscription body.
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_socket.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_socket.html .
     XSub = c.ZMQ_XSUB,
 
     /// A socket of type ZMQ_REQ is used by a client to send requests to and receive replies from a service.
@@ -47,7 +47,7 @@ pub const ZSocketType = enum(c_int) {
     /// and subsequent zmq_recv(reply) calls. Each request sent is round-robined among all services,
     /// and each reply received is matched with the last issued request.
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_socket.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_socket.html .
     Req = c.ZMQ_REQ,
 
     /// A socket of type ZMQ_REP is used by a service to receive requests from and send replies to a client.
@@ -56,14 +56,14 @@ pub const ZSocketType = enum(c_int) {
     /// Each request received is fair-queued from among all clients, and each reply sent is routed to the client that
     /// issued the last request. If the original requester doesn’t exist any more the reply is silently discarded.
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_socket.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_socket.html .
     Rep = c.ZMQ_REP,
 
     /// A socket of type ZMQ_DEALER is an advanced pattern used for extending request/reply sockets.
     ///
     /// Each message sent is round-robined among all connected peers, and each message received is fair-queued from all connected peers.
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_socket.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_socket.html .
     Dealer = c.ZMQ_DEALER,
 
     /// A socket of type ZMQ_ROUTER is an advanced socket type used for extending request/reply sockets.
@@ -72,14 +72,14 @@ pub const ZSocketType = enum(c_int) {
     /// of the originating peer to the message before passing it to the application.
     /// Messages received are fair-queued from among all connected peers.
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_socket.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_socket.html .
     Router = c.ZMQ_ROUTER,
 
     /// A socket of type ZMQ_PULL is used by a pipeline node to receive messages from upstream pipeline nodes.
     ///
     /// Messages are fair-queued from among all connected upstream nodes. The zmq_send() function is not implemented for this socket type.
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_socket.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_socket.html .
     Pull = c.ZMQ_PULL,
 
     /// A socket of type ZMQ_PUSH is used by a pipeline node to send messages to downstream pipeline nodes.
@@ -87,7 +87,7 @@ pub const ZSocketType = enum(c_int) {
     /// Messages are round-robined to all connected downstream nodes.
     /// The zmq_recv() function is not implemented for this socket type.
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_socket.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_socket.html .
     Push = c.ZMQ_PUSH,
 };
 
@@ -113,7 +113,7 @@ pub const ZSocketOption = union(ZSocketOptionTag) {
     /// Unit: milliseconds
     /// Default: -1 (infinite)
     ///
-    /// For more details, see http://api.zeromq.org/3-0:zmq-setsockopt
+    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_setsockopt.html
     ReceiveTimeout: i32,
 
     /// ZMQ_RCVHWM: Set high water mark for inbound messages
@@ -128,9 +128,9 @@ pub const ZSocketOption = union(ZSocketOptionTag) {
     /// Refer to the individual socket descriptions in zmq_socket(3) for details on the exact action taken for each socket type.
     ///
     /// Unit: message count
-    /// Default: 0 (unlimited)
+    /// Default: 1000
     ///
-    /// For more details, see http://api.zeromq.org/3-0:zmq-setsockopt
+    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_setsockopt.html
     ReceiveHighWaterMark: i32,
 
     /// ZMQ_RCVBUF: Set kernel receive buffer size
@@ -144,7 +144,7 @@ pub const ZSocketOption = union(ZSocketOptionTag) {
     /// Unit: bytes
     /// Default: 0 (use kernel default)
     ///
-    /// For more details, see http://api.zeromq.org/3-0:zmq-setsockopt
+    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_setsockopt.html
     ReceiveBufferSize: i32,
 
     /// ZMQ_SNDTIMEO: Maximum time before a send operation returns with EAGAIN
@@ -159,7 +159,7 @@ pub const ZSocketOption = union(ZSocketOptionTag) {
     /// Unit: milliseconds
     /// Default: -1 (infinite)
     ///
-    /// For more details, see http://api.zeromq.org/3-0:zmq-setsockopt
+    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_setsockopt.html
     SendTimeout: i32,
 
     /// ZMQ_SNDHWM: Set high water mark for outbound messages
@@ -177,9 +177,9 @@ pub const ZSocketOption = union(ZSocketOptionTag) {
     /// in zmq_socket(3) for details on the exact action taken for each socket type.
     ///
     /// Unit: message count
-    /// Default: 0 (unlimited)
+    /// Default: 1000
     ///
-    /// For more details, see http://api.zeromq.org/3-0:zmq-setsockopt
+    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_setsockopt.html
     SendHighWaterMark: i32,
 
     /// ZMQ_SNDBUF: Set kernel transmit buffer size
@@ -193,7 +193,7 @@ pub const ZSocketOption = union(ZSocketOptionTag) {
     /// Unit: bytes
     /// Default: 0 (use kernel default)
     ///
-    /// For more details, see http://api.zeromq.org/3-0:zmq-setsockopt
+    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_setsockopt.html
     SendBufferSize: i32,
 };
 
@@ -263,7 +263,7 @@ pub const ZSocket = struct {
     ///
     ///   const port = try socket.bind("tcp://127.0.0.1:!");
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_bind.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_bind.html .
     pub fn bind(self: *ZSocket, ep: []const u8) !u16 {
         const epZ = try self.allocator.dupeZ(u8, ep);
         defer self.allocator.free(epZ);
@@ -295,7 +295,7 @@ pub const ZSocket = struct {
     ///
     ///   try socket.connect("tcp://127.0.0.1:54321");
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_connect.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_connect.html .
     pub fn connect(self: *ZSocket, ep: []const u8) !void {
         const epZ = try self.allocator.dupeZ(u8, ep);
         defer self.allocator.free(epZ);
