@@ -15,7 +15,7 @@ It is implemented as a wrapper of the "High-level C Binding for ZeroMQ" ([CZMQ](
 Since this library is basically a 1:1 wrapper of CZMQ, please refer to the [CZMQ documentation](http://czmq.zeromq.org) to get a better understanding on how the library works.
 Please feel free to also have a look at the various unit tests in this library (esp. [ZSocket](src/classes/zsocket.zig)).
 
-Running the server:
+Running the server (also see [full example](https://github.com/nine-lives-later/zzmq/tree/main/examples/hello_world_server)):
 
 ```zig
 const zzmq = @import("zzmq");
@@ -31,9 +31,7 @@ defer frame.deinit();
 
 try socket.send(&frame, .{});
 ```
-
-Running the client:
-
+Running the client (also see [full example](https://github.com/nine-lives-later/zzmq/tree/main/examples/hello_world_client)):
 
 ```zig
 const zzmq = @import("zzmq");
