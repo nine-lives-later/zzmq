@@ -1,0 +1,12 @@
+.{
+    .name = "dealer_res_client",
+    .version = "0.1.0",
+    .paths = .{"src"},
+
+    .dependencies = .{
+        .zzmq = .{
+            .url = "https://github.com/nine-lives-later/zzmq/archive/refs/tags/v0.1.2-zig0.11.tar.gz",
+            .hash = "1220b8243727a827c6d9626d8965d99f62b5d1fabf658f36d409891d616fe911146d",
+        },
+    },
+}
