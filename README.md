@@ -99,6 +99,8 @@ sudo apt install libczmq-dev
 sudo apt install libczmq
 ```
 
+See the [unit test Dockerfile](test.Dockerfile) on how to install it into an Alpine Docker image.
+
 ## Contributing
 
 ### Zig Version Branches
