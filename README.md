@@ -130,4 +130,4 @@ Published under the [Mozilla Public License 2.0](https://www.mozilla.org/en-US/M
 - Safe for use in close-source applications.
 - You do not need a commercial license.
 
-Feel free to also see the [ZeroMQ licensing terms](http://zeromq.wikidot.com/area:licensing).
+Feel free to also see the [ZeroMQ licensing terms](https://zeromq.org/license/).
