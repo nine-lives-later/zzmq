@@ -1,0 +1,14 @@
+.{
+    .name = "hello_world_server",
+    .version = "0.1.0",
+    .paths = .{"src"},
+
+    .dependencies = .{
+        .zzmq = .{
+            // For this example, use the master branch. please use a specific tag for production code!
+            // It might be required to change the hash (by removing it, or using `zig fetch` with Zig 0.12+).
+            .url = "https://github.com/nine-lives-later/zzmq/archive/refs/heads/master.tar.gz",
+            .hash = "12201156c4aa0f1d3bd747464185d683f5c54be2f963ea6573541c0527c0ef9c27ad",
+        },
+    },
+}
