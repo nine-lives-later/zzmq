@@ -1,10 +1,13 @@
 const std = @import("std");
 const zzmq = @import("zzmq");
 
-fn senderThreadMain(socket: *zzmq.ZSocket, stop: *bool, allocator: std.mem.Allocator) !void {
+var stopRunning_ = std.atomic.Atomic(bool).init(false);
+const stopRunning = &stopRunning_;
+
+fn senderThreadMain(socket: *zzmq.ZSocket, allocator: std.mem.Allocator) !void {
     var index: usize = 0;
 
-    while (!stop.*) {
+    while (!stopRunning.load(.SeqCst)) {
         index += 1;
 
         std.log.info("Sending {}...", .{index});
@@ -15,11 +18,11 @@ fn senderThreadMain(socket: *zzmq.ZSocket, stop: *bool, allocator: std.mem.Alloc
             var frame = try zzmq.ZFrame.initEmpty();
             defer frame.deinit();
 
-            while (!stop.*) { // retry until a client connects
+            while (!stopRunning.load(.SeqCst)) { // retry until a client connects
                 socket.send(&frame, .{ .more = true }) catch continue;
                 break;
             }
-            if (stop.*) return;
+            if (stopRunning.load(.SeqCst)) return;
         }
 
         // Send the request
@@ -38,11 +41,11 @@ fn senderThreadMain(socket: *zzmq.ZSocket, stop: *bool, allocator: std.mem.Alloc
     }
 }
 
-var senderThreadStop = false;
-
 fn sig_handler(sig: c_int) align(1) callconv(.C) void {
     _ = sig;
-    senderThreadStop = true;
+    std.log.info("Stopping...", .{});
+
+    stopRunning.store(true, .SeqCst);
 }
 
 const sig_ign = std.os.Sigaction{
@@ -52,9 +55,6 @@ const sig_ign = std.os.Sigaction{
 };
 
 pub fn main() !void {
-    try std.os.sigaction(std.os.SIG.INT, &sig_ign, null);
-    try std.os.sigaction(std.os.SIG.TERM, &sig_ign, null);
-
     std.log.info("Starting the server...", .{});
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -73,16 +73,19 @@ pub fn main() !void {
     try socket.setSocketOption(.{ .SendHighWaterMark = 50 });
     try socket.setSocketOption(.{ .SendBufferSize = 256 }); // keep it small
 
+    try std.os.sigaction(std.os.SIG.INT, &sig_ign, null); // ZSocket.init() will re-assign interrupts
+    try std.os.sigaction(std.os.SIG.TERM, &sig_ign, null);
+
     _ = try socket.bind("tcp://127.0.0.1:5555");
 
     // start sending threads
-    const senderThread = try std.Thread.spawn(.{}, senderThreadMain, .{ socket, &senderThreadStop, allocator });
+    const senderThread = try std.Thread.spawn(.{}, senderThreadMain, .{ socket, allocator });
     defer {
-        senderThreadStop = true;
+        stopRunning.store(true, .SeqCst);
         senderThread.join();
     }
 
-    while (!senderThreadStop) {
+    while (!stopRunning.load(.SeqCst)) {
         // Wait for the next reply
         {
             var frame = socket.receive() catch continue;
