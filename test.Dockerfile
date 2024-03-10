@@ -21,7 +21,7 @@ RUN make install
 
 
 
-FROM cpp_base as czmq_builder
+FROM alpine:3.19 as builder
 
 # install Zig 0.11 from Alpine edge repo: https://pkgs.alpinelinux.org/package/edge/testing/x86_64/zig
 RUN echo "@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
