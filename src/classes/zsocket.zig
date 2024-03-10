@@ -397,7 +397,7 @@ pub const ZSocket = struct {
 
     /// Send a message to a socket.
     ///
-    /// Note: The message will lose ownership and become invalid, unless `options.reuse` is true.
+    /// Note: The message can lose ownership and become invalid, even on failures!
     ///
     /// Example:
     ///       var message = try ZMessage.init(data);
@@ -423,6 +423,8 @@ pub const ZSocket = struct {
 
         const result = c.zmq_msg_send(try messageExt.move(), self.socket_, flags);
         if (result < 0) {
+            messageExt.unmove(); // re-transfer ownership, because `zmq_msg_send()` failed
+
             switch (c.zmq_errno()) {
                 c.EAGAIN => return error.NonBlockingQueueFull,
                 c.ENOTSUP => return error.SocketTypeUnsupported,
@@ -796,4 +798,7 @@ test "ZSocket - send timeout" {
     defer message.deinit();
 
     try std.testing.expectError(error.NonBlockingQueueFull, socket.send(&message, .{}));
+
+    // try again, the owner should be lost
+    try std.testing.expectError(error.MessageOwnershipLost, socket.send(&message, .{}));
 }

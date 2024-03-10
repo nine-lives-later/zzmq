@@ -286,6 +286,14 @@ const ZMessageExternal = struct {
         return &self.msg_; // returning a pointer is fine, here
     }
 
+    /// Retakes ownership of raw representation of the message.
+    ///
+    /// This is used to retake ownership in some corner cases,
+    /// like failed `c.zmq_msg_send()` calls.
+    pub fn unmove(self: *ZMessageExternal) void {
+        self.msgOwned_ = true;
+    }
+
     /// Destroys the message and performs clean up.
     pub fn deinit(self: *ZMessageExternal) void {
         if (self.msgOwned_) {
