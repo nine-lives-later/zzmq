@@ -4,6 +4,12 @@ const zzmq = @import("zzmq");
 pub fn main() !void {
     std.log.info("Starting the server...", .{});
 
+    {
+        const version = zzmq.ZContext.version();
+
+        std.log.info("libzmq version: {}.{}.{}", .{ version.major, version.minor, version.patch });
+    }
+
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer {
         if (gpa.deinit() == .leak)
@@ -12,15 +18,18 @@ pub fn main() !void {
 
     const allocator = gpa.allocator();
 
-    var socket = try zzmq.ZSocket.init(allocator, zzmq.ZSocketType.Rep);
+    var context = try zzmq.ZContext.init(allocator);
+    defer context.deinit();
+
+    var socket = try zzmq.ZSocket.init(zzmq.ZSocketType.Rep, &context);
     defer socket.deinit();
 
-    _ = try socket.bind("tcp://127.0.0.1:5555");
+    try socket.bind("tcp://127.0.0.1:5555");
 
     while (true) {
         // Wait for next request from client
         {
-            var frame = try socket.receive();
+            var frame = try socket.receive(.{});
             defer frame.deinit();
 
             const data = try frame.data();
@@ -33,10 +42,10 @@ pub fn main() !void {
 
         // Send reply back to client
         {
-            var frame = try zzmq.ZFrame.init("World");
-            defer frame.deinit();
+            var msg = try zzmq.ZMessage.initUnmanaged("World", null);
+            defer msg.deinit();
 
-            try socket.send(&frame, .{});
+            try socket.send(&msg, .{});
         }
     }
 }

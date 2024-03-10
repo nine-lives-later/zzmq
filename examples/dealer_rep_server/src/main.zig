@@ -15,12 +15,18 @@ fn senderThreadMain(socket: *zzmq.ZSocket, allocator: std.mem.Allocator) !void {
         // Send the header (empty)
         // See https://zguide.zeromq.org/docs/chapter3/#The-DEALER-to-REP-Combination
         {
-            var frame = try zzmq.ZFrame.initEmpty();
-            defer frame.deinit();
-
             while (!stopRunning.load(.SeqCst)) { // retry until a client connects
-                socket.send(&frame, .{ .more = true }) catch continue;
-                break;
+                var msg = try zzmq.ZMessage.initExternalEmpty();
+                defer msg.deinit();
+
+                socket.send(&msg, .{ .more = true }) catch |err| {
+                    std.log.info("Waiting for first client to connect: {}", .{err});
+
+                    std.time.sleep(1 * std.time.ns_per_s);
+                    continue;
+                };
+
+                break; // success, exit retry loop
             }
             if (stopRunning.load(.SeqCst)) return;
         }
@@ -30,10 +36,10 @@ fn senderThreadMain(socket: *zzmq.ZSocket, allocator: std.mem.Allocator) !void {
             var body = try std.fmt.allocPrint(allocator, "Hello: {}", .{index});
             defer allocator.free(body);
 
-            var frame = try zzmq.ZFrame.init(body);
-            defer frame.deinit();
+            var msg = try zzmq.ZMessage.init(allocator, body);
+            defer msg.deinit();
 
-            try socket.send(&frame, .{});
+            try socket.send(&msg, .{});
         }
 
         // wait a moment
@@ -57,6 +63,12 @@ const sig_ign = std.os.Sigaction{
 pub fn main() !void {
     std.log.info("Starting the server...", .{});
 
+    {
+        const version = zzmq.ZContext.version();
+
+        std.log.info("libzmq version: {}.{}.{}", .{ version.major, version.minor, version.patch });
+    }
+
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer {
         if (gpa.deinit() == .leak)
@@ -65,7 +77,10 @@ pub fn main() !void {
 
     const allocator = gpa.allocator();
 
-    var socket = try zzmq.ZSocket.init(allocator, zzmq.ZSocketType.Dealer);
+    var context = try zzmq.ZContext.init(allocator);
+    defer context.deinit();
+
+    var socket = try zzmq.ZSocket.init(zzmq.ZSocketType.Dealer, &context);
     defer socket.deinit();
 
     try socket.setSocketOption(.{ .ReceiveTimeout = 500 });
@@ -73,10 +88,10 @@ pub fn main() !void {
     try socket.setSocketOption(.{ .SendHighWaterMark = 50 });
     try socket.setSocketOption(.{ .SendBufferSize = 256 }); // keep it small
 
-    try std.os.sigaction(std.os.SIG.INT, &sig_ign, null); // ZSocket.init() will re-assign interrupts
+    try std.os.sigaction(std.os.SIG.INT, &sig_ign, null);
     try std.os.sigaction(std.os.SIG.TERM, &sig_ign, null);
 
-    _ = try socket.bind("tcp://127.0.0.1:5555");
+    try socket.bind("tcp://127.0.0.1:5555");
 
     // start sending threads
     const senderThread = try std.Thread.spawn(.{}, senderThreadMain, .{ socket, allocator });
@@ -88,24 +103,24 @@ pub fn main() !void {
     while (!stopRunning.load(.SeqCst)) {
         // Wait for the next reply
         {
-            var frame = socket.receive() catch continue;
-            defer frame.deinit();
+            var msg = socket.receive(.{}) catch continue;
+            defer msg.deinit();
 
-            if (@as(usize, 0) != try frame.size() or !try frame.hasMore()) { // ignore anything that is not a delimiter frame
+            if (@as(usize, 0) != try msg.size() or !msg.hasMore()) { // ignore anything that is not a delimiter frame
                 continue;
             }
         }
 
         // read the content frames
         while (true) {
-            var frame = try socket.receive();
-            defer frame.deinit();
+            var msg = try socket.receive(.{});
+            defer msg.deinit();
 
-            const data = try frame.data();
+            const data = try msg.data();
 
             std.log.info("Received: {s}", .{data});
 
-            if (!try frame.hasMore()) break;
+            if (!msg.hasMore()) break;
         }
     }
 }

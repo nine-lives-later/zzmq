@@ -4,6 +4,12 @@ const zzmq = @import("zzmq");
 pub fn main() !void {
     std.log.info("Connecting to the server...", .{});
 
+    {
+        const version = zzmq.ZContext.version();
+
+        std.log.info("libzmq version: {}.{}.{}", .{ version.major, version.minor, version.patch });
+    }
+
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer {
         if (gpa.deinit() == .leak)
@@ -12,7 +18,10 @@ pub fn main() !void {
 
     const allocator = gpa.allocator();
 
-    var socket = try zzmq.ZSocket.init(allocator, zzmq.ZSocketType.Req);
+    var context = try zzmq.ZContext.init(allocator);
+    defer context.deinit();
+
+    var socket = try zzmq.ZSocket.init(zzmq.ZSocketType.Req, &context);
     defer socket.deinit();
 
     try socket.connect("tcp://127.0.0.1:5555");
@@ -23,18 +32,18 @@ pub fn main() !void {
         {
             std.log.info("Sending request {}...", .{i});
 
-            var frame = try zzmq.ZFrame.init("Hello");
-            defer frame.deinit();
+            var msg = try zzmq.ZMessage.initUnmanaged("Hello", null);
+            defer msg.deinit();
 
-            try socket.send(&frame, .{});
+            try socket.send(&msg, .{});
         }
 
         // Receive the reply
         {
-            var frame = try socket.receive();
-            defer frame.deinit();
+            var msg = try socket.receive(.{});
+            defer msg.deinit();
 
-            const data = try frame.data();
+            const data = try msg.data();
 
             std.log.info("Received reply {} [ {s} ]", .{ i, data });
         }

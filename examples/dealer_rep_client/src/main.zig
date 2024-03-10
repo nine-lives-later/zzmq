@@ -20,6 +20,12 @@ const sig_ign = std.os.Sigaction{
 pub fn main() !void {
     std.log.info("Connecting to the server...", .{});
 
+    {
+        const version = zzmq.ZContext.version();
+
+        std.log.info("libzmq version: {}.{}.{}", .{ version.major, version.minor, version.patch });
+    }
+
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer {
         if (gpa.deinit() == .leak)
@@ -28,7 +34,10 @@ pub fn main() !void {
 
     const allocator = gpa.allocator();
 
-    var socket = try zzmq.ZSocket.init(allocator, zzmq.ZSocketType.Rep);
+    var context = try zzmq.ZContext.init(allocator);
+    defer context.deinit();
+
+    var socket = try zzmq.ZSocket.init(zzmq.ZSocketType.Rep, &context);
     defer socket.deinit();
 
     try socket.setSocketOption(.{ .ReceiveTimeout = 5000 });
@@ -36,7 +45,7 @@ pub fn main() !void {
     try socket.setSocketOption(.{ .ReceiveBufferSize = 256 }); // keep it small
     try socket.setSocketOption(.{ .SendTimeout = 500 });
 
-    try std.os.sigaction(std.os.SIG.INT, &sig_ign, null); // ZSocket.init() will re-assign interrupts
+    try std.os.sigaction(std.os.SIG.INT, &sig_ign, null);
     try std.os.sigaction(std.os.SIG.TERM, &sig_ign, null);
 
     try socket.connect("tcp://127.0.0.1:5555");
@@ -44,10 +53,10 @@ pub fn main() !void {
     while (!stopRunning.load(.SeqCst)) {
         // Receive the request
         {
-            var frame = try socket.receive();
-            defer frame.deinit();
+            var msg = try socket.receive(.{});
+            defer msg.deinit();
 
-            const data = try frame.data();
+            const data = try msg.data();
 
             std.log.info("Received request: {s}", .{data});
         }
@@ -59,10 +68,10 @@ pub fn main() !void {
         {
             std.log.info("Sending reply...", .{});
 
-            var frame = try zzmq.ZFrame.init("World");
-            defer frame.deinit();
+            var msg = try zzmq.ZMessage.initUnmanaged("World", null);
+            defer msg.deinit();
 
-            try socket.send(&frame, .{});
+            try socket.send(&msg, .{});
         }
     }
 }
