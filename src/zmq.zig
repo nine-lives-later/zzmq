@@ -1,4 +1,4 @@
 pub const c = @cImport({
-    @cInclude("czmq.h");
+    @cInclude("zmq.h");
     @cInclude("string.h");
 });

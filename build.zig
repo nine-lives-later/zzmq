@@ -14,7 +14,7 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
-    lib_test.linkSystemLibrary("czmq");
+    lib_test.linkSystemLibrary("zmq");
     lib_test.linkLibC();
 
     const run_test = b.addRunArtifact(lib_test);

@@ -1,13 +1,54 @@
 const std = @import("std");
-const zframe = @import("zframe.zig");
-const c = @import("../czmq.zig").c;
+const zcontext = @import("zcontext.zig");
+const zmessage = @import("zmessage.zig");
+const c = @import("../zmq.zig").c;
+
+pub const ZMessageReceived = struct {
+    message_: zmessage.ZMessage = undefined,
+    hasMore_: bool = false,
+
+    /// Takes the ownership over the provided raw message.
+    ///
+    /// Note: the message argument must be initalized, using `zmq_msg_init()` or other similar functions.
+    ///
+    /// The ownership can be lost when sending the message.
+    pub fn init(message: *c.zmq_msg_t, hasMoreParts: bool) !ZMessageReceived {
+        return .{
+            .message_ = try zmessage.ZMessage.initExternal(message),
+            .hasMore_ = hasMoreParts,
+        };
+    }
+
+    /// Retrieves a slice to the data stored within the message.
+    pub fn data(self: *const ZMessageReceived) ![]const u8 {
+        return self.message_.data();
+    }
+
+    /// Retrieves a size of data within the message.
+    pub fn size(self: *const ZMessageReceived) !usize {
+        return self.message_.size();
+    }
+
+    /// Returns true, if the message is part of a multi-message
+    /// and more message parts are available.
+    ///
+    /// To retrieve the next part, call `socket.receive()` again.
+    pub fn hasMore(self: *const ZMessageReceived) bool {
+        return self.hasMore_;
+    }
+
+    /// Destroys the message and performs clean up.
+    pub fn deinit(self: *ZMessageReceived) void {
+        self.message_.deinit();
+    }
+};
 
 pub const ZSocketType = enum(c_int) {
     /// A socket of type ZMQ_PAIR can only be connected to a single peer at any one time.
     ///
     /// No message routing or filtering is performed on messages sent over a ZMQ_PAIR socket.
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_socket.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_socket.html .
     Pair = c.ZMQ_PAIR,
 
     /// A socket of type ZMQ_PUB is used by a publisher to distribute data.
@@ -15,7 +56,7 @@ pub const ZSocketType = enum(c_int) {
     /// Messages sent are distributed in a fan out fashion to all connected peers.
     /// The zmq_recv function is not implemented for this socket type.
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_socket.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_socket.html .
     Pub = c.ZMQ_PUB,
 
     /// A socket of type ZMQ_SUB is used by a subscriber to subscribe to data distributed by a publisher.
@@ -24,21 +65,21 @@ pub const ZSocketType = enum(c_int) {
     /// of zmq_setsockopt to specify which messages to subscribe to.
     /// The zmq_send() function is not implemented for this socket type.
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_socket.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_socket.html .
     Sub = c.ZMQ_SUB,
 
     /// Same as ZMQ_PUB except that you can receive subscriptions from the peers in form of incoming messages.
     ///
     /// Subscription message is a byte 1 (for subscriptions) or byte 0 (for unsubscriptions) followed by the subscription body.
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_socket.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_socket.html .
     XPub = c.ZMQ_XPUB,
 
     /// Same as ZMQ_SUB except that you subscribe by sending subscription messages to the socket.
     ///
     /// Subscription message is a byte 1 (for subscriptions) or byte 0 (for unsubscriptions) followed by the subscription body.
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_socket.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_socket.html .
     XSub = c.ZMQ_XSUB,
 
     /// A socket of type ZMQ_REQ is used by a client to send requests to and receive replies from a service.
@@ -47,7 +88,7 @@ pub const ZSocketType = enum(c_int) {
     /// and subsequent zmq_recv(reply) calls. Each request sent is round-robined among all services,
     /// and each reply received is matched with the last issued request.
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_socket.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_socket.html .
     Req = c.ZMQ_REQ,
 
     /// A socket of type ZMQ_REP is used by a service to receive requests from and send replies to a client.
@@ -56,14 +97,14 @@ pub const ZSocketType = enum(c_int) {
     /// Each request received is fair-queued from among all clients, and each reply sent is routed to the client that
     /// issued the last request. If the original requester doesn’t exist any more the reply is silently discarded.
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_socket.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_socket.html .
     Rep = c.ZMQ_REP,
 
     /// A socket of type ZMQ_DEALER is an advanced pattern used for extending request/reply sockets.
     ///
     /// Each message sent is round-robined among all connected peers, and each message received is fair-queued from all connected peers.
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_socket.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_socket.html .
     Dealer = c.ZMQ_DEALER,
 
     /// A socket of type ZMQ_ROUTER is an advanced socket type used for extending request/reply sockets.
@@ -72,14 +113,14 @@ pub const ZSocketType = enum(c_int) {
     /// of the originating peer to the message before passing it to the application.
     /// Messages received are fair-queued from among all connected peers.
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_socket.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_socket.html .
     Router = c.ZMQ_ROUTER,
 
     /// A socket of type ZMQ_PULL is used by a pipeline node to receive messages from upstream pipeline nodes.
     ///
     /// Messages are fair-queued from among all connected upstream nodes. The zmq_send() function is not implemented for this socket type.
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_socket.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_socket.html .
     Pull = c.ZMQ_PULL,
 
     /// A socket of type ZMQ_PUSH is used by a pipeline node to send messages to downstream pipeline nodes.
@@ -87,7 +128,7 @@ pub const ZSocketType = enum(c_int) {
     /// Messages are round-robined to all connected downstream nodes.
     /// The zmq_recv() function is not implemented for this socket type.
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_socket.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_socket.html .
     Push = c.ZMQ_PUSH,
 };
 
@@ -99,6 +140,8 @@ pub const ZSocketOptionTag = enum {
     SendTimeout,
     SendHighWaterMark,
     SendBufferSize,
+
+    LingerTimeout,
 };
 
 pub const ZSocketOption = union(ZSocketOptionTag) {
@@ -127,7 +170,7 @@ pub const ZSocketOption = union(ZSocketOptionTag) {
     ///
     /// Refer to the individual socket descriptions in zmq_socket(3) for details on the exact action taken for each socket type.
     ///
-    /// Unit: message count
+    /// Unit: message count (0 = unlimited)
     /// Default: 1000
     ///
     /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_setsockopt.html
@@ -176,7 +219,7 @@ pub const ZSocketOption = union(ZSocketOptionTag) {
     /// Refer to the individual socket descriptions
     /// in zmq_socket(3) for details on the exact action taken for each socket type.
     ///
-    /// Unit: message count
+    /// Unit: message count (0 = unlimited)
     /// Default: 1000
     ///
     /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_setsockopt.html
@@ -195,6 +238,19 @@ pub const ZSocketOption = union(ZSocketOptionTag) {
     ///
     /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_setsockopt.html
     SendBufferSize: i32,
+
+    /// ZMQ_LINGER: Set linger period for socket shutdown
+    ///
+    /// The 'ZMQ_LINGER' option shall set the linger period for the specified 'socket'.
+    /// The linger period determines how long pending messages which have yet to be sent
+    /// to a peer shall linger in memory after a socket is disconnected with zmq_disconnect or
+    /// closed with zmq_close, and further affects the termination of the socket’s context with zmq_ctx_term.
+    ///
+    /// Unit: milliseconds (0 = don't wait, -1 = infinite)
+    /// Default: 0 (don't wait)
+    ///
+    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_setsockopt.html
+    LingerTimeout: i32,
 };
 
 /// System level socket, which allows for opening outgoing and
@@ -203,88 +259,106 @@ pub const ZSocketOption = union(ZSocketOptionTag) {
 /// It is either used to *bind* to a local port, or *connect*
 /// to a remote (or local) port.
 pub const ZSocket = struct {
-    allocator: std.mem.Allocator,
-    selfArena: std.heap.ArenaAllocator,
-    socket: *c.zsock_t,
-    type: []const u8,
-    endpoint: ?[]const u8,
+    allocator_: std.mem.Allocator,
+    selfArena_: std.heap.ArenaAllocator,
+    socket_: *anyopaque,
+    endpoint_: ?[]const u8,
 
-    pub fn init(allocator: std.mem.Allocator, socketType: ZSocketType) !*ZSocket {
+    pub fn init(socketType: ZSocketType, context: *zcontext.ZContext) !*ZSocket {
         // try creating the socket, early
-        var s = c.zsock_new(@intFromEnum(socketType)) orelse return error.SocketCreateFailed;
-        errdefer {
-            var ss: ?*c.zsock_t = s;
-            c.zsock_destroy(&ss);
-        }
+        var s = c.zmq_socket(context.ctx_, @intFromEnum(socketType)) orelse return error.SocketCreateFailed;
+        errdefer _ = c.zmq_close(s);
 
         // create the managed object
+        const allocator = context.allocator_;
+
         var selfArena = std.heap.ArenaAllocator.init(allocator);
         errdefer selfArena.deinit();
         const selfAllocator = selfArena.allocator();
 
         var r = try selfAllocator.create(ZSocket);
-        r.allocator = allocator;
-        r.selfArena = selfArena;
-        r.socket = s;
-        r.endpoint = null;
+        r.allocator_ = allocator;
+        r.selfArena_ = selfArena;
+        r.socket_ = s;
+        r.endpoint_ = null;
 
-        // get the socket type as string
-        const typeStrZ = std.mem.span(c.zsock_type_str(s));
-
-        r.type = try selfAllocator.dupe(u8, typeStrZ[0..typeStrZ.len]); // copy to managed memory
+        // set docket defaults
+        try r.setSocketOption(.{ .SendHighWaterMark = 1000 });
+        try r.setSocketOption(.{ .ReceiveHighWaterMark = 1000 });
+        try r.setSocketOption(.{ .LingerTimeout = 0 });
 
         // done
         return r;
     }
 
-    ///  Bind a socket to a endpoint. For tcp:// endpoints, supports
-    ///  ephemeral ports, if you specify the port number as "*". By default
-    ///  zsock uses the IANA designated range from C000 (49152) to FFFF (65535).
-    ///  To override this range, follow the "*" with "[first-last]". Either or
-    ///  both first and last may be empty. To bind to a random port within the
-    ///  range, use "!" in place of "*".
+    /// Returns the actual endpoint being used for this socket.
     ///
-    ///  Examples:
+    /// When binding TCP and IPC transports, it will also contain
+    /// the actual port being used.
+    pub fn endpoint(self: *const ZSocket) ![]const u8 {
+        if (self.endpoint_) |e| {
+            return e;
+        }
+
+        return error.NotBoundOrConnected;
+    }
+
+    /// Bind a socket to a endpoint. For tcp:// endpoints, supports
+    /// ephemeral ports, if you specify the port number as "*".
+    ///
+    /// Call `endpoint()` to retrieve the actual endpoint being used.
+    ///
+    /// Examples:
     ///      tcp://127.0.0.1:*           bind to first free port from C000 up
-    ///      tcp://127.0.0.1:!           bind to random port from C000 to FFFF
-    ///      tcp://127.0.0.1:*[60000-]   bind to first free port from 60000 up
-    ///      tcp://127.0.0.1:![-60000]   bind to random port from C000 to 60000
-    ///      tcp://127.0.0.1:![55000-55999] bind to random port from 55000 to 55999
-    ///
-    ///  On success, returns the actual port number used, for tcp:// endpoints,
-    ///  and 0 for other transports. Note that when using
-    ///  ephemeral ports, a port may be reused by different services without
-    ///  clients being aware. Protocols that run on ephemeral ports should take
-    ///  this into account.
     ///
     /// Example:
     ///   var socket = ZSocket.init(ZSocketType.Pair);
     ///   defer socket.deinit();
     ///
-    ///   const port = try socket.bind("tcp://127.0.0.1:!");
+    ///   const port = try socket.bind("tcp://127.0.0.1:*");
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_bind.html .
-    pub fn bind(self: *ZSocket, ep: []const u8) !u16 {
-        const epZ = try self.allocator.dupeZ(u8, ep);
-        defer self.allocator.free(epZ);
+    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_tcp.html
+    pub fn bind(self: *ZSocket, ep: []const u8) !void {
+        const epZ = try self.allocator_.dupeZ(u8, ep);
+        defer self.allocator_.free(epZ);
 
-        const result = c.zsock_bind(self.socket, "%s", &epZ[0]);
-
+        var result = c.zmq_bind(self.socket_, &epZ[0]);
         if (result < 0) {
-            return error.SocketBindFailed;
+            switch (c.zmq_errno()) {
+                c.EINVAL => return error.EndpointInvalid,
+                c.EPROTONOSUPPORT => return error.TransportUnsupported,
+                c.ENOCOMPATPROTO => return error.TransportIncompatible,
+                c.EADDRINUSE => return error.AddressAlreadyInUse,
+                c.EADDRNOTAVAIL => return error.AddressNotLocal,
+                c.ENODEV => return error.AddressInterfaceInvalid,
+                c.EMTHREAD => return error.IOThreadsExceeded,
+                else => return error.SocketBindFailed,
+            }
         }
+        errdefer _ = c.zmq_unbind(self.socket_, &epZ[0]);
 
         // retrieve endpoint value
-        const selfAllocator = self.selfArena.allocator();
+        var lastEndpoint: [256]u8 = undefined;
+        var lastEndpointLen: usize = @sizeOf(@TypeOf(lastEndpoint));
 
-        if (self.endpoint) |e| {
+        lastEndpoint[0] = 0; // set 0 terminator
+
+        result = c.zmq_getsockopt(self.socket_, c.ZMQ_LAST_ENDPOINT, &lastEndpoint[0], &lastEndpointLen);
+        if (result < 0) {
+            return error.GetEndpointFailed;
+        }
+
+        const selfAllocator = self.selfArena_.allocator();
+
+        if (self.endpoint_) |e| { // free existing value
             selfAllocator.free(e);
         }
 
-        self.endpoint = try selfAllocator.dupe(u8, ep); // copy to managed memory
-
-        // done
-        return @intCast(result);
+        if (lastEndpoint[0] != 0 and lastEndpointLen > 0) {
+            self.endpoint_ = try selfAllocator.dupe(u8, lastEndpoint[0 .. lastEndpointLen - 1]); // cut terminating 0
+        } else {
+            self.endpoint_ = try selfAllocator.dupe(u8, ep); // copy to managed memory
+        }
     }
 
     /// Connect a socket to an endpoint
@@ -295,209 +369,319 @@ pub const ZSocket = struct {
     ///
     ///   try socket.connect("tcp://127.0.0.1:54321");
     ///
-    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_connect.html .
+    /// For more details, see https://libzmq.readthedocs.io/en/zeromq3-x/zmq_connect.html .
     pub fn connect(self: *ZSocket, ep: []const u8) !void {
-        const epZ = try self.allocator.dupeZ(u8, ep);
-        defer self.allocator.free(epZ);
+        const epZ = try self.allocator_.dupeZ(u8, ep);
+        defer self.allocator_.free(epZ);
 
-        const result = c.zsock_connect(self.socket, "%s", &epZ[0]);
+        const result = c.zmq_connect(self.socket_, &epZ[0]);
         if (result < 0) {
-            return error.SocketConnectFailed;
+            switch (c.zmq_errno()) {
+                c.EINVAL => return error.EndpointInvalid,
+                c.EPROTONOSUPPORT => return error.TransportUnsupported,
+                c.ENOCOMPATPROTO => return error.TransportIncompatible,
+                c.EMTHREAD => return error.IOThreadsExceeded,
+                else => return error.SocketConnectFailed,
+            }
         }
 
         // retrieve endpoint value
-        const selfAllocator = self.selfArena.allocator();
+        const selfAllocator = self.selfArena_.allocator();
 
-        if (self.endpoint) |e| {
+        if (self.endpoint_) |e| { // free existing value
             selfAllocator.free(e);
         }
 
-        self.endpoint = try selfAllocator.dupe(u8, ep); // copy to managed memory
+        self.endpoint_ = try selfAllocator.dupe(u8, ep); // copy to managed memory
     }
 
-    /// Send a frame to a socket.
+    /// Send a message to a socket.
     ///
-    /// Note: The frame will lose ownership and become invalid, unless `options.reuse` is true.
+    /// Note: The message will lose ownership and become invalid, unless `options.reuse` is true.
     ///
     /// Example:
-    ///       var frame = try ZFrame.init(data);
-    ///       defer frame.deinit();
+    ///       var message = try ZMessage.init(data);
+    ///       defer message.deinit();
     ///
-    ///       try socket.send(&frame, .{});
-    pub fn send(self: *ZSocket, frame: *zframe.ZFrame, options: struct {
-        /// Indicates that this frame is part of a multi-part message
-        /// and more frames will be sent.
+    ///       try socket.send(&message, .{});
+    pub fn send(self: *ZSocket, message: *zmessage.ZMessage, options: struct {
+        /// Indicates that this message is part of a multi-part message
+        /// and more messages will be sent.
         ///
-        /// On the receiving side, will cause `frame.hasMore()` to return true.
+        /// On the receiving side, will cause `message.hasMore()` to return true.
         more: bool = false,
 
-        /// Indicates that the provided frame shall not loose
-        /// ownership over its data.
-        ///
-        /// Important: This requires the frame data to live as long
-        ///            as it takes for the frame to be sent.
-        ///            Consider setting `dontwait` to true.
-        reuse: bool = false,
-
-        /// Do not wait for the frame to be sent, but return immediately.
+        /// Do not wait for the message to be sent, but return immediately.
         dontwait: bool = false,
     }) !void {
-        var f: ?*c.zframe_t = frame.frame;
-
         var flags: c_int = 0;
-        if (options.more) flags |= c.ZFRAME_MORE;
-        if (options.reuse) flags |= c.ZFRAME_REUSE;
-        if (options.dontwait) flags |= c.ZFRAME_DONTWAIT;
+        if (options.more) flags |= c.ZMQ_SNDMORE;
+        if (options.dontwait) flags |= c.ZMQ_DONTWAIT;
 
-        const result = c.zframe_send(&f, self.socket, flags);
+        var messageExt = try message.allocExternal();
+        defer messageExt.deinit();
+
+        const result = c.zmq_msg_send(try messageExt.move(), self.socket_, flags);
         if (result < 0) {
-            return error.SendFrameFailed;
-        }
-
-        // frame lost ownership of internal object
-        if (!options.reuse) {
-            frame.frameOwned = false;
+            switch (c.zmq_errno()) {
+                c.EAGAIN => return error.NonBlockingQueueFull,
+                c.ENOTSUP => return error.SocketTypeUnsupported,
+                c.EFSM => return error.SocketStateInvalid,
+                c.EINTR => return error.Interrupted,
+                c.EFAULT => return error.MessageInvalid,
+                else => return error.SendMessageFailed,
+            }
         }
     }
 
-    /// Receive a single frame of a message from the socket.
+    /// Receive a single message of a message from the socket.
     /// Does a blocking recv, if you want to not block then use
     /// zpoller or zloop.
     ///
-    /// The caller must invoke `deinit()` on the returned frame.
+    /// The caller must invoke `deinit()` on the returned message.
     ///
-    /// If receiving a multi-part message, then `frame.hasMore()` will return true
+    /// If receiving a multi-part message, then `message.hasMore()` will return true
     /// and the another receive call should be invoked.
     ///
     /// Example:
-    ///       var frame = try socket.receive();
-    ///       defer frame.deinit();
+    ///       var message = try socket.receive(.{});
+    ///       defer message.deinit();
     ///
-    ///       const data = try frame.data();
-    pub fn receive(self: *ZSocket) !zframe.ZFrame {
-        var frame = c.zframe_recv(self.socket);
-        if (frame == null) {
-            return error.ReceiveFrameInterrupted;
+    ///       const data = try message.data();
+    pub fn receive(self: *ZSocket, options: struct {
+        /// Do not wait for the message to be received, but return immediately.
+        dontwait: bool = false,
+    }) !ZMessageReceived {
+        var flags: c_int = 0;
+        if (options.dontwait) flags |= c.ZMQ_DONTWAIT;
+
+        var message: c.zmq_msg_t = undefined;
+        var result = c.zmq_msg_init(&message);
+        if (result < 0) {
+            return error.InitMessageFailed;
         }
 
-        return zframe.ZFrame{ .frame = frame.? };
+        result = c.zmq_msg_recv(&message, self.socket_, flags);
+        if (result < 0) {
+            switch (c.zmq_errno()) {
+                c.EAGAIN => return error.NonBlockingQueueEmpty,
+                c.ENOTSUP => return error.SocketTypeUnsupported,
+                c.EFSM => return error.SocketStateInvalid,
+                c.EINTR => return error.Interrupted,
+                c.EFAULT => return error.MessageInvalid,
+                else => return error.ReceiveMessageFailed,
+            }
+        }
+
+        // check if this is a multi-part message
+        var hasMore: c_int = undefined;
+        var hasMoreLen: usize = @sizeOf(@TypeOf(hasMore));
+
+        result = c.zmq_getsockopt(self.socket_, c.ZMQ_RCVMORE, &hasMore, &hasMoreLen);
+        if (result < 0) {
+            return error.CheckForMoreFailed;
+        }
+
+        return ZMessageReceived.init(&message, hasMore != 0);
     }
 
     /// Set an option on the socket. See `ZSocketOption` for details.
     pub fn setSocketOption(self: *ZSocket, opt: ZSocketOption) !void {
-        switch (opt) {
-            .ReceiveTimeout => c.zsock_set_rcvtimeo(self.socket, @intCast(opt.ReceiveTimeout)),
-            .ReceiveHighWaterMark => c.zsock_set_rcvhwm(self.socket, @intCast(opt.ReceiveHighWaterMark)),
-            .ReceiveBufferSize => c.zsock_set_rcvbuf(self.socket, @intCast(opt.ReceiveBufferSize)),
+        var result: c_int = 0;
 
-            .SendTimeout => c.zsock_set_sndtimeo(self.socket, @intCast(opt.SendTimeout)),
-            .SendHighWaterMark => c.zsock_set_sndhwm(self.socket, @intCast(opt.SendHighWaterMark)),
-            .SendBufferSize => c.zsock_set_sndbuf(self.socket, @intCast(opt.SendBufferSize)),
+        switch (opt) {
+            .ReceiveTimeout => result = c.zmq_setsockopt(self.socket_, c.ZMQ_RCVTIMEO, &opt.ReceiveTimeout, @sizeOf(@TypeOf(opt.ReceiveTimeout))),
+            .ReceiveHighWaterMark => result = c.zmq_setsockopt(self.socket_, c.ZMQ_RCVHWM, &opt.ReceiveHighWaterMark, @sizeOf(@TypeOf(opt.ReceiveHighWaterMark))),
+            .ReceiveBufferSize => result = c.zmq_setsockopt(self.socket_, c.ZMQ_RCVBUF, &opt.ReceiveBufferSize, @sizeOf(@TypeOf(opt.ReceiveBufferSize))),
+
+            .SendTimeout => result = c.zmq_setsockopt(self.socket_, c.ZMQ_SNDTIMEO, &opt.SendTimeout, @sizeOf(@TypeOf(opt.SendTimeout))),
+            .SendHighWaterMark => result = c.zmq_setsockopt(self.socket_, c.ZMQ_SNDHWM, &opt.SendHighWaterMark, @sizeOf(@TypeOf(opt.SendHighWaterMark))),
+            .SendBufferSize => result = c.zmq_setsockopt(self.socket_, c.ZMQ_SNDBUF, &opt.SendBufferSize, @sizeOf(@TypeOf(opt.SendBufferSize))),
+
+            .LingerTimeout => result = c.zmq_setsockopt(self.socket_, c.ZMQ_LINGER, &opt.LingerTimeout, @sizeOf(@TypeOf(opt.LingerTimeout))),
 
             //else => return error.UnknownOption,
         }
+
+        if (result < 0) return error.SetFailed;
     }
 
     /// Get an option of the socket. See `ZSocketOption` for details.
     pub fn getSocketOption(self: *ZSocket, opt: *ZSocketOption) !void {
-        switch (opt.*) {
-            .ReceiveTimeout => opt.ReceiveTimeout = c.zsock_rcvtimeo(self.socket),
-            .ReceiveHighWaterMark => opt.ReceiveHighWaterMark = c.zsock_rcvhwm(self.socket),
-            .ReceiveBufferSize => opt.ReceiveBufferSize = c.zsock_rcvbuf(self.socket),
+        var result: c_int = 0;
 
-            .SendTimeout => opt.SendTimeout = c.zsock_sndtimeo(self.socket),
-            .SendHighWaterMark => opt.SendHighWaterMark = c.zsock_sndhwm(self.socket),
-            .SendBufferSize => opt.SendBufferSize = c.zsock_sndbuf(self.socket),
+        switch (opt.*) {
+            .ReceiveTimeout => {
+                var length: usize = @sizeOf(@TypeOf(opt.ReceiveTimeout));
+
+                result = c.zmq_getsockopt(self.socket_, c.ZMQ_RCVTIMEO, &opt.ReceiveTimeout, &length);
+            },
+            .ReceiveHighWaterMark => {
+                var length: usize = @sizeOf(@TypeOf(opt.ReceiveHighWaterMark));
+
+                result = c.zmq_getsockopt(self.socket_, c.ZMQ_RCVHWM, &opt.ReceiveHighWaterMark, &length);
+            },
+            .ReceiveBufferSize => {
+                var length: usize = @sizeOf(@TypeOf(opt.ReceiveBufferSize));
+
+                result = c.zmq_getsockopt(self.socket_, c.ZMQ_RCVBUF, &opt.ReceiveBufferSize, &length);
+            },
+
+            .SendTimeout => {
+                var length: usize = @sizeOf(@TypeOf(opt.SendTimeout));
+
+                result = c.zmq_getsockopt(self.socket_, c.ZMQ_SNDTIMEO, &opt.SendTimeout, &length);
+            },
+            .SendHighWaterMark => {
+                var length: usize = @sizeOf(@TypeOf(opt.SendHighWaterMark));
+
+                result = c.zmq_getsockopt(self.socket_, c.ZMQ_SNDHWM, &opt.SendHighWaterMark, &length);
+            },
+            .SendBufferSize => {
+                var length: usize = @sizeOf(@TypeOf(opt.SendBufferSize));
+
+                result = c.zmq_getsockopt(self.socket_, c.ZMQ_SNDBUF, &opt.SendBufferSize, &length);
+            },
+
+            .LingerTimeout => {
+                var length: usize = @sizeOf(@TypeOf(opt.LingerTimeout));
+
+                result = c.zmq_getsockopt(self.socket_, c.ZMQ_LINGER, &opt.LingerTimeout, &length);
+            },
 
             //else => return error.UnknownOption,
         }
+
+        if (result < 0) return error.GetFailed;
     }
 
     /// Destroy the socket and clean up
     pub fn deinit(self: *ZSocket) void {
-        var socket: ?*c.zsock_t = self.socket;
-
-        c.zsock_destroy(&socket);
+        _ = c.zmq_close(self.socket_);
 
         // clean-up arena
-        var arena = self.selfArena; // prevent seg fault
+        var arena = self.selfArena_; // prevent seg fault
         arena.deinit();
     }
 };
 
-test "ZSocket - roundtrip" {
+test "ZSocket - roundtrip single" {
     const allocator = std.testing.allocator;
 
+    // create the context
+    var context = try zcontext.ZContext.init(allocator);
+    defer context.deinit();
+
     // bind the incoming socket
-    var incoming = try ZSocket.init(allocator, ZSocketType.Pair);
+    var incoming = try ZSocket.init(ZSocketType.Pair, &context);
     defer incoming.deinit();
 
-    const port = try incoming.bind("tcp://127.0.0.1:!");
-    try std.testing.expect(port >= 0xC000);
-    try std.testing.expect(incoming.endpoint != null);
+    try incoming.bind("tcp://127.0.0.1:*");
+    try std.testing.expect(incoming.endpoint_ != null);
+
+    std.log.info("Endpoint: {s}", .{try incoming.endpoint()});
 
     // connect to the socket
-    var outgoing = try ZSocket.init(allocator, ZSocketType.Pair);
+    var outgoing = try ZSocket.init(ZSocketType.Pair, &context);
     defer outgoing.deinit();
 
-    const endpoint = try std.fmt.allocPrint(allocator, "tcp://127.0.0.1:{}", .{port});
-    defer allocator.free(endpoint);
-
-    try outgoing.connect(endpoint);
-    try std.testing.expect(outgoing.endpoint != null);
+    try outgoing.connect(try incoming.endpoint());
+    try std.testing.expect(outgoing.endpoint_ != null);
 
     // send a message
     const msg = "hello world";
 
-    var outgoingData = try zframe.ZFrame.init(msg);
+    var outgoingData = try zmessage.ZMessage.initUnmanaged(msg, null);
     defer outgoingData.deinit();
-    try std.testing.expectEqual(true, outgoingData.frameOwned);
     try std.testing.expectEqual(msg.len, try outgoingData.size());
     try std.testing.expectEqualStrings(msg, try outgoingData.data());
 
-    // send the first frame
-    try outgoing.send(&outgoingData, .{ .dontwait = true, .reuse = true, .more = true });
-    try std.testing.expectEqual(true, outgoingData.frameOwned);
-
-    // send the second frame (reusing the previous one)
+    // send the message
     try outgoing.send(&outgoingData, .{ .dontwait = true });
-    try std.testing.expectEqual(false, outgoingData.frameOwned);
 
-    // receive the first frame of the message
-    var incomingData = try incoming.receive();
+    // receive the message
+    var incomingData = try incoming.receive(.{});
     defer incomingData.deinit();
 
     try std.testing.expectEqual(msg.len, try incomingData.size());
     try std.testing.expectEqualStrings(msg, try incomingData.data());
-    try std.testing.expectEqual(true, try incomingData.hasMore());
+    try std.testing.expectEqual(false, incomingData.hasMore());
+}
 
-    // receive the second frame
-    var incomingData2 = try incoming.receive();
+test "ZSocket - roundtrip multi-part" {
+    const allocator = std.testing.allocator;
+
+    // create the context
+    var context = try zcontext.ZContext.init(allocator);
+    defer context.deinit();
+
+    // bind the incoming socket
+    var incoming = try ZSocket.init(ZSocketType.Pair, &context);
+    defer incoming.deinit();
+
+    try incoming.bind("tcp://127.0.0.1:*");
+    try std.testing.expect(incoming.endpoint_ != null);
+
+    std.log.info("Endpoint: {s}", .{try incoming.endpoint()});
+
+    // connect to the socket
+    var outgoing = try ZSocket.init(ZSocketType.Pair, &context);
+    defer outgoing.deinit();
+
+    try outgoing.connect(try incoming.endpoint());
+    try std.testing.expect(outgoing.endpoint_ != null);
+
+    // send a message
+    const msg = "hello world";
+
+    var outgoingData = try zmessage.ZMessage.initUnmanaged(msg, null);
+    defer outgoingData.deinit();
+    try std.testing.expectEqual(msg.len, try outgoingData.size());
+    try std.testing.expectEqualStrings(msg, try outgoingData.data());
+
+    // send the first message
+    try outgoing.send(&outgoingData, .{ .dontwait = true, .more = true });
+
+    // send the second message (reusing the previous one)
+    try outgoing.send(&outgoingData, .{ .dontwait = true });
+
+    // receive the first message of the message
+    var incomingData = try incoming.receive(.{});
+    defer incomingData.deinit();
+
+    try std.testing.expectEqual(msg.len, try incomingData.size());
+    try std.testing.expectEqualStrings(msg, try incomingData.data());
+    try std.testing.expectEqual(true, incomingData.hasMore());
+
+    // receive the second message
+    var incomingData2 = try incoming.receive(.{});
     defer incomingData2.deinit();
 
     try std.testing.expectEqual(msg.len, try incomingData2.size());
     try std.testing.expectEqualStrings(msg, try incomingData2.data());
-    try std.testing.expectEqual(false, try incomingData2.hasMore());
+    try std.testing.expectEqual(false, incomingData2.hasMore());
 }
 
 test "ZSocket - roundtrip json" {
     const allocator = std.testing.allocator;
 
+    // create the context
+    var context = try zcontext.ZContext.init(allocator);
+    defer context.deinit();
+
     // bind the incoming socket
-    var incoming = try ZSocket.init(allocator, ZSocketType.Pair);
+    var incoming = try ZSocket.init(ZSocketType.Pair, &context);
     defer incoming.deinit();
 
-    const port = try incoming.bind("tcp://127.0.0.1:!");
-    try std.testing.expect(port >= 0xC000);
+    try incoming.bind("tcp://127.0.0.1:*");
+
+    std.log.info("Endpoint: {s}", .{try incoming.endpoint()});
 
     // connect to the socket
-    var outgoing = try ZSocket.init(allocator, ZSocketType.Pair);
+    var outgoing = try ZSocket.init(ZSocketType.Pair, &context);
     defer outgoing.deinit();
 
-    const endpoint = try std.fmt.allocPrint(allocator, "tcp://127.0.0.1:{}", .{port});
-    defer allocator.free(endpoint);
-
-    try outgoing.connect(endpoint);
+    try outgoing.connect(try incoming.endpoint());
 
     // send a message
     const Obj = struct {
@@ -526,13 +710,13 @@ test "ZSocket - roundtrip json" {
     const msg = try std.json.stringifyAlloc(allocator, &outgoingObj, .{});
     defer allocator.free(msg);
 
-    var outgoingData = try zframe.ZFrame.init(msg);
+    var outgoingData = try zmessage.ZMessage.initUnmanaged(msg, null);
     defer outgoingData.deinit();
 
     try outgoing.send(&outgoingData, .{ .dontwait = true });
 
-    // receive the first frame of the message
-    var incomingData = try incoming.receive();
+    // receive the first message of the message
+    var incomingData = try incoming.receive(.{});
     defer incomingData.deinit();
 
     const incomingObj = try std.json.parseFromSlice(Obj, allocator, try incomingData.data(), .{});
@@ -544,8 +728,12 @@ test "ZSocket - roundtrip json" {
 test "ZSocket - receive timeout" {
     const allocator = std.testing.allocator;
 
+    // create the context
+    var context = try zcontext.ZContext.init(allocator);
+    defer context.deinit();
+
     // create the socket
-    var incoming = try ZSocket.init(allocator, ZSocketType.Rep);
+    var incoming = try ZSocket.init(ZSocketType.Rep, &context);
     defer incoming.deinit();
 
     // set the receive timeout
@@ -564,18 +752,23 @@ test "ZSocket - receive timeout" {
     }
 
     // bind the port
-    const port = try incoming.bind("tcp://127.0.0.1:!");
-    try std.testing.expect(port >= 0xC000);
+    try incoming.bind("tcp://127.0.0.1:*");
+
+    std.log.info("Endpoint: {s}", .{try incoming.endpoint()});
 
     // try to receive the message
-    try std.testing.expectError(error.ReceiveFrameInterrupted, incoming.receive());
+    try std.testing.expectError(error.NonBlockingQueueEmpty, incoming.receive(.{}));
 }
 
 test "ZSocket - send timeout" {
     const allocator = std.testing.allocator;
 
+    // create the context
+    var context = try zcontext.ZContext.init(allocator);
+    defer context.deinit();
+
     // create the socket
-    var socket = try ZSocket.init(allocator, ZSocketType.Pair);
+    var socket = try ZSocket.init(ZSocketType.Pair, &context);
     defer socket.deinit();
 
     // set the send timeout
@@ -594,12 +787,13 @@ test "ZSocket - send timeout" {
     }
 
     // bind the port
-    const port = try socket.bind("tcp://127.0.0.1:!");
-    try std.testing.expect(port >= 0xC000);
+    try socket.bind("tcp://127.0.0.1:*");
+
+    std.log.info("Endpoint: {s}", .{try socket.endpoint()});
 
     // try to send the message
-    var frame = try zframe.ZFrame.initEmpty();
-    defer frame.deinit();
+    var message = try zmessage.ZMessage.initExternalEmpty();
+    defer message.deinit();
 
-    try std.testing.expectError(error.SendFrameFailed, socket.send(&frame, .{}));
+    try std.testing.expectError(error.NonBlockingQueueFull, socket.send(&message, .{}));
 }

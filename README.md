@@ -2,7 +2,11 @@
 
 This Zig library provides a ZeroMQ client.
 
-It is implemented as a wrapper of the "High-level C Binding for ZeroMQ" ([CZMQ](http://czmq.zeromq.org)).
+It is implemented based on the C API of [libzmq](https://libzmq.readthedocs.io/en/latest/).
+The interface is highly inspired by [CZMQ](http://czmq.zeromq.org) and [goczmq](https://github.com/zeromq/goczmq).
+
+It was originally based on the "High-level C Binding for ZeroMQ" ([CZMQ](http://czmq.zeromq.org)), 
+but later moved to using [libzmq](https://libzmq.readthedocs.io/en/latest/) directly, to provide zero-copy message support.
 
 **IMPORTANT: The library is currently still work in progress!!**
 
@@ -12,7 +16,7 @@ It is implemented as a wrapper of the "High-level C Binding for ZeroMQ" ([CZMQ](
 
 ### Minimal Example
 
-Since this library is basically a 1:1 wrapper of CZMQ, please refer to the [CZMQ documentation](http://czmq.zeromq.org) to get a better understanding on how the library works.
+This repository holds various example within the `examples` folder.
 Please feel free to also have a look at the various unit tests in this library (esp. [ZSocket](src/classes/zsocket.zig)).
 
 Running the server (also see [full example](https://github.com/nine-lives-later/zzmq/tree/main/examples/hello_world_server)):
@@ -23,20 +27,26 @@ const zzmq = @import("zzmq");
 var socket = try zzmq.ZSocket.init(allocator, zzmq.ZSocketType.Pair);
 defer socket.deinit();
 
-const port = try socket.bind("tcp://127.0.0.1:!");
+try socket.bind("tcp://127.0.0.1:*");
+
+std.log.info("Endpoint: {s}", .{try socket.endpoint()});
 
 // send a message
-var frame = try zzmq.ZFrame.init(data);
-defer frame.deinit();
+var message = try zzmq.ZMessage.initUnmanaged(data, null);
+defer message.deinit();
 
-try socket.send(&frame, .{});
+try socket.send(&message, .{});
 ```
+
 Running the client (also see [full example](https://github.com/nine-lives-later/zzmq/tree/main/examples/hello_world_client)):
 
 ```zig
 const zzmq = @import("zzmq");
 
-var socket = try zzmq.ZSocket.init(allocator, zzmq.ZSocketType.Pair);
+var context = try zzmq.ZContext.init(allocator);
+defer context.deinit();
+
+var socket = try zzmq.ZSocket.init(zzmq.ZSocketType.Pair, &context);
 defer socket.deinit();
 
 const endpoint = try std.fmt.allocPrint(allocator, "tcp://127.0.0.1:{}", .{port});
@@ -45,10 +55,10 @@ defer allocator.free(endpoint);
 try socket.connect(endpoint);
 
 // receive a message
-var frame = try socket.receive();
-defer frame.deinit();
+var message = try socket.receive(.{});
+defer message.deinit();
 
-const data = try frame.data();
+const data = try message.data();
 ```
 
 
@@ -83,23 +93,25 @@ const zzmq = b.dependency("zzmq", .{
 //       `exe.root_module.addImport` instead of `exe.addModule`
 exe.addModule("zzmq", zzmq.module("zzmq"));
 
-exe.linkSystemLibrary("czmq");
+exe.linkSystemLibrary("zmq");
 exe.linkLibC();
 ```
 
 ### Installing local dependencies
 
-Installing [CZMQ](http://czmq.zeromq.org) development library version 4.0 or higher is also required:
+Installing [libzmq](https://zeromq.org/download/) development library version 4.1 or higher is also required:
 
 ```sh
 # Building on Ubuntu, PoP_OS, ZorinOS, etc.
-sudo apt install libczmq-dev
+sudo apt install libzmq5-dev
 
 # Running on Ubuntu, PoP_OS, ZorinOS, etc.
-sudo apt install libczmq
+sudo apt install libzmq5
 ```
 
 See the [unit test Dockerfile](test.Dockerfile) on how to install it into an Alpine Docker image.
+
+To retrieve the version of the libzmq library actually being used, call `ZContext.version()`.
 
 ## Contributing
 
@@ -121,7 +133,7 @@ The library can be tested locally by running: `zig build test`.
 
 Implementation done by [Felix Kollmann](https://github.com/fkollmann).
 
-Based on the work of [CZMQ](http://czmq.zeromq.org), inspired by [goczmq](https://github.com/zeromq/goczmq).
+Inspired by [CZMQ](http://czmq.zeromq.org) and [goczmq](https://github.com/zeromq/goczmq).
 
 ## License
 

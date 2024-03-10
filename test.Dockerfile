@@ -23,32 +23,12 @@ RUN make install
 
 FROM cpp_base as czmq_builder
 
-ARG CZMQ_VERSION=4.2.1
-
-# add the pre-processed source package (note: this is not the raw source code from Git!)
-ADD https://github.com/zeromq/czmq/releases/download/v${CZMQ_VERSION}/czmq-${CZMQ_VERSION}.tar.gz /tmp/source.tgz
-
-COPY --from=libzmq_builder /build/output/ /usr/
-
-WORKDIR /build
-
-RUN tar -xzf /tmp/source.tgz --strip-components=1
-
-RUN ./configure --prefix=/build/output
-RUN make install
-
-
-
-
-FROM alpine:3.19 as builder
-
 # install Zig 0.11 from Alpine edge repo: https://pkgs.alpinelinux.org/package/edge/testing/x86_64/zig
 RUN echo "@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
 RUN apk add --no-cache zig@testing~=0.11.0
 
 # install dependencies (keep in sync with other images above)
 COPY --from=libzmq_builder /build/output/ /usr/
-COPY --from=czmq_builder /build/output/ /usr/
 
 COPY . /build/
 
