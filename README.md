@@ -8,7 +8,10 @@ The interface is highly inspired by [CZMQ](http://czmq.zeromq.org) and [goczmq](
 It was originally based on the "High-level C Binding for ZeroMQ" ([CZMQ](http://czmq.zeromq.org)), 
 but later moved to using [libzmq](https://libzmq.readthedocs.io/en/latest/) directly, to provide zero-copy message support.
 
-**IMPORTANT: The library is currently still work in progress!!**
+> [!IMPORTANT]
+> The library is currently still work in progress!!
+> 
+> Please feel free to open pull requests for features needed.
 
 [![Unit Tests](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml)
 
@@ -24,7 +27,10 @@ Running the server (also see [full example](https://github.com/nine-lives-later/
 ```zig
 const zzmq = @import("zzmq");
 
-var socket = try zzmq.ZSocket.init(allocator, zzmq.ZSocketType.Pair);
+var context = try zzmq.ZContext.init(allocator);
+defer context.deinit();
+
+var socket = try zzmq.ZSocket.init(zzmq.ZSocketType.Pair, &context);
 defer socket.deinit();
 
 try socket.bind("tcp://127.0.0.1:*");
