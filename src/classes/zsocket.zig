@@ -266,7 +266,7 @@ pub const ZSocket = struct {
 
     pub fn init(socketType: ZSocketType, context: *zcontext.ZContext) !*ZSocket {
         // try creating the socket, early
-        var s = c.zmq_socket(context.ctx_, @intFromEnum(socketType)) orelse return error.SocketCreateFailed;
+        const s = c.zmq_socket(context.ctx_, @intFromEnum(socketType)) orelse return error.SocketCreateFailed;
         errdefer _ = c.zmq_close(s);
 
         // create the managed object

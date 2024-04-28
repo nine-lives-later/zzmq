@@ -91,7 +91,7 @@ pub const ZMessage = struct {
         switch (self.impl_) {
             .Internal => return try self.impl_.Internal.allocExternal(),
             .External => {
-                var cpy = self.impl_.External;
+                const cpy = self.impl_.External;
 
                 self.impl_.External.msgOwned_ = false; // ownership moved away
 
@@ -177,11 +177,11 @@ const ZMessageInternal = struct {
     }
 
     fn refAdd(self: *ZMessageInternal) void {
-        _ = @atomicRmw(usize, &self.refCounter_, .Add, 1, .SeqCst);
+        _ = @atomicRmw(usize, &self.refCounter_, .Add, 1, .seq_cst);
     }
 
     fn refRelease(self: *ZMessageInternal) void {
-        const prev = @atomicRmw(usize, &self.refCounter_, .Sub, 1, .SeqCst);
+        const prev = @atomicRmw(usize, &self.refCounter_, .Sub, 1, .seq_cst);
 
         if (prev == 1) { // it's now zero
             if (self.allocator_) |a| {
