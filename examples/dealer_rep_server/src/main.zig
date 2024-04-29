@@ -1,13 +1,13 @@
 const std = @import("std");
 const zzmq = @import("zzmq");
 
-var stopRunning_ = std.atomic.Atomic(bool).init(false);
+var stopRunning_ = std.atomic.Value(bool).init(false);
 const stopRunning = &stopRunning_;
 
 fn senderThreadMain(socket: *zzmq.ZSocket, allocator: std.mem.Allocator) !void {
     var index: usize = 0;
 
-    while (!stopRunning.load(.SeqCst)) {
+    while (!stopRunning.load(.seq_cst)) {
         index += 1;
 
         std.log.info("Sending {}...", .{index});
@@ -15,7 +15,7 @@ fn senderThreadMain(socket: *zzmq.ZSocket, allocator: std.mem.Allocator) !void {
         // Send the header (empty)
         // See https://zguide.zeromq.org/docs/chapter3/#The-DEALER-to-REP-Combination
         {
-            while (!stopRunning.load(.SeqCst)) { // retry until a client connects
+            while (!stopRunning.load(.seq_cst)) { // retry until a client connects
                 var msg = try zzmq.ZMessage.initExternalEmpty();
                 defer msg.deinit();
 
@@ -28,12 +28,12 @@ fn senderThreadMain(socket: *zzmq.ZSocket, allocator: std.mem.Allocator) !void {
 
                 break; // success, exit retry loop
             }
-            if (stopRunning.load(.SeqCst)) return;
+            if (stopRunning.load(.seq_cst)) return;
         }
 
         // Send the request
         {
-            var body = try std.fmt.allocPrint(allocator, "Hello: {}", .{index});
+            const body = try std.fmt.allocPrint(allocator, "Hello: {}", .{index});
             defer allocator.free(body);
 
             var msg = try zzmq.ZMessage.init(allocator, body);
@@ -51,12 +51,12 @@ fn sig_handler(sig: c_int) align(1) callconv(.C) void {
     _ = sig;
     std.log.info("Stopping...", .{});
 
-    stopRunning.store(true, .SeqCst);
+    stopRunning.store(true, .seq_cst);
 }
 
-const sig_ign = std.os.Sigaction{
+const sig_ign = std.os.linux.Sigaction{
     .handler = .{ .handler = &sig_handler },
-    .mask = std.os.empty_sigset,
+    .mask = std.os.linux.empty_sigset,
     .flags = 0,
 };
 
@@ -88,19 +88,19 @@ pub fn main() !void {
     try socket.setSocketOption(.{ .SendHighWaterMark = 50 });
     try socket.setSocketOption(.{ .SendBufferSize = 256 }); // keep it small
 
-    try std.os.sigaction(std.os.SIG.INT, &sig_ign, null);
-    try std.os.sigaction(std.os.SIG.TERM, &sig_ign, null);
+    _ = std.os.linux.sigaction(std.os.linux.SIG.INT, &sig_ign, null);
+    _ = std.os.linux.sigaction(std.os.linux.SIG.TERM, &sig_ign, null);
 
     try socket.bind("tcp://127.0.0.1:5555");
 
     // start sending threads
     const senderThread = try std.Thread.spawn(.{}, senderThreadMain, .{ socket, allocator });
     defer {
-        stopRunning.store(true, .SeqCst);
+        stopRunning.store(true, .seq_cst);
         senderThread.join();
     }
 
-    while (!stopRunning.load(.SeqCst)) {
+    while (!stopRunning.load(.seq_cst)) {
         // Wait for the next reply
         {
             var msg = socket.receive(.{}) catch continue;
