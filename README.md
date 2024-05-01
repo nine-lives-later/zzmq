@@ -13,7 +13,8 @@ but later moved to using [libzmq](https://libzmq.readthedocs.io/en/latest/) dire
 > 
 > Please feel free to open pull requests for features needed.
 
-[![Unit Tests](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml)
+[![Unit Tests](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml) 
+[![Examples](https://github.com/nine-lives-later/zzmq/actions/workflows/examples.yml/badge.svg?branch=main)](https://github.com/nine-lives-later/zzmq/actions/workflows/examples.yml)
 
 ## Using the Library
 
