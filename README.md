@@ -73,20 +73,9 @@ const data = try message.data();
 
 Determine the specific [release tag](https://github.com/nine-lives-later/zzmq/tags) of the library to use in the project.
 
-Add to the `build.zig.zon` file, e.g. for Zig 0.12:
-
-```zig
-.{
-    .dependencies = .{
-        .zzmq = .{
-            .url = "https://github.com/nine-lives-later/zzmq/archive/refs/tags/v0.2.1-zig0.12.tar.gz",
-            .hash = "1220aa4a3d778a66356de9eb0f54937b8c2229853f7af933dbca79d538d97aa57f04",
-        },
-    },
-}
+```sh
+zig fetch --save=zzmq 'https://github.com/nine-lives-later/zzmq/archive/refs/tags/v0.2.1-zig0.12.tar.gz'
 ```
-
-Note: Should the hash be wrong, remove the `.hash` field and the compiler error will show the correct value. Starting with Zig 0.12 you can also use `zig fetch zzmq <url>`.
 
 It is also required to add it to the `build.zig` file:
 
