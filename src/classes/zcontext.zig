@@ -25,7 +25,7 @@ pub const ZContext = struct {
         }
 
         // try creating the socket, early
-        var s = c.zmq_ctx_new() orelse {
+        const s = c.zmq_ctx_new() orelse {
             switch (c.zmq_errno()) {
                 c.EMFILE => return error.MaxOpenFilesExceeded,
                 else => return error.ContextCreateFailed,

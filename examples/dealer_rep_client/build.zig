@@ -29,7 +29,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    exe.addModule("zzmq", zzmq.module("zzmq"));
+    exe.root_module.addImport("zzmq", zzmq.module("zzmq"));
 
     exe.linkSystemLibrary("zmq");
     exe.linkLibC();

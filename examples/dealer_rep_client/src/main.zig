@@ -1,19 +1,19 @@
 const std = @import("std");
 const zzmq = @import("zzmq");
 
-var stopRunning_ = std.atomic.Atomic(bool).init(false);
+var stopRunning_ = std.atomic.Value(bool).init(false);
 const stopRunning = &stopRunning_;
 
 fn sig_handler(sig: c_int) align(1) callconv(.C) void {
     _ = sig;
     std.log.info("Stopping...", .{});
 
-    stopRunning.store(true, .SeqCst);
+    stopRunning.store(true, .seq_cst);
 }
 
-const sig_ign = std.os.Sigaction{
+const sig_ign = std.os.linux.Sigaction{
     .handler = .{ .handler = &sig_handler },
-    .mask = std.os.empty_sigset,
+    .mask = std.os.linux.empty_sigset,
     .flags = 0,
 };
 
@@ -45,12 +45,12 @@ pub fn main() !void {
     try socket.setSocketOption(.{ .ReceiveBufferSize = 256 }); // keep it small
     try socket.setSocketOption(.{ .SendTimeout = 500 });
 
-    try std.os.sigaction(std.os.SIG.INT, &sig_ign, null);
-    try std.os.sigaction(std.os.SIG.TERM, &sig_ign, null);
+    _ = std.os.linux.sigaction(std.os.linux.SIG.INT, &sig_ign, null);
+    _ = std.os.linux.sigaction(std.os.linux.SIG.TERM, &sig_ign, null);
 
     try socket.connect("tcp://127.0.0.1:5555");
 
-    while (!stopRunning.load(.SeqCst)) {
+    while (!stopRunning.load(.seq_cst)) {
         // Receive the request
         {
             var msg = try socket.receive(.{});
