@@ -132,19 +132,7 @@ pub const ZSocketType = enum(c_int) {
     Push = c.ZMQ_PUSH,
 };
 
-pub const ZSocketOptionTag = enum {
-    ReceiveTimeout,
-    ReceiveHighWaterMark,
-    ReceiveBufferSize,
-
-    SendTimeout,
-    SendHighWaterMark,
-    SendBufferSize,
-
-    LingerTimeout,
-};
-
-pub const ZSocketOption = union(ZSocketOptionTag) {
+pub const ZSocketOption = union(enum) {
     /// ZMQ_RCVTIMEO: Maximum time before a recv operation returns with EAGAIN
     ///
     /// Sets the timeout for receive operation on the socket.
@@ -251,6 +239,22 @@ pub const ZSocketOption = union(ZSocketOptionTag) {
     ///
     /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_setsockopt.html
     LingerTimeout: i32,
+
+    /// ZMQ_ROUTING_ID: Set socket routing id
+    ///
+    /// The 'ZMQ_ROUTING_ID' option shall set the routing id of the specified 'socket' when connecting to a ROUTER socket.
+    ///
+    /// A routing id must be at least one byte and at most 255 bytes long. Identities starting with a zero byte are reserved for
+    /// use by the 0MQ infrastructure.
+    ///
+    /// If two clients use the same routing id when connecting to a ROUTER, the results shall
+    /// depend on the ZMQ_ROUTER_HANDOVER option setting. If that is not set (or set to the
+    /// default of zero), the ROUTER socket shall reject clients trying to connect with an
+    /// already-used routing id. If that option is set to 1, the ROUTER socket shall hand-over
+    /// the connection to the new client and disconnect the existing one.
+    ///
+    /// For more details, see https://libzmq.readthedocs.io/en/latest/zmq_setsockopt.html
+    RoutingId: []u8,
 };
 
 /// System level socket, which allows for opening outgoing and
@@ -502,6 +506,8 @@ pub const ZSocket = struct {
 
             .LingerTimeout => result = c.zmq_setsockopt(self.socket_, c.ZMQ_LINGER, &opt.LingerTimeout, @sizeOf(@TypeOf(opt.LingerTimeout))),
 
+            .RoutingId => result = c.zmq_setsockopt(self.socket_, c.ZMQ_IDENTITY, opt.RoutingId.ptr, opt.RoutingId.len),
+
             //else => return error.UnknownOption,
         }
 
@@ -549,6 +555,10 @@ pub const ZSocket = struct {
                 var length: usize = @sizeOf(@TypeOf(opt.LingerTimeout));
 
                 result = c.zmq_getsockopt(self.socket_, c.ZMQ_LINGER, &opt.LingerTimeout, &length);
+            },
+
+            .RoutingId => {
+                result = c.zmq_getsockopt(self.socket_, c.ZMQ_ROUTING_ID, opt.RoutingId.ptr, &opt.RoutingId.len);
             },
 
             //else => return error.UnknownOption,
