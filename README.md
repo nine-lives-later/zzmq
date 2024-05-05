@@ -74,7 +74,7 @@ const data = try message.data();
 Determine the specific [release tag](https://github.com/nine-lives-later/zzmq/tags) of the library to use in the project.
 
 ```sh
-zig fetch --save=zzmq 'https://github.com/nine-lives-later/zzmq/archive/refs/tags/v0.2.1-zig0.12.tar.gz'
+zig fetch --save=zzmq 'https://github.com/nine-lives-later/zzmq/archive/refs/tags/v0.2.2-zig0.12.tar.gz'
 ```
 
 It is also required to add it to the `build.zig` file:
