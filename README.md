@@ -113,11 +113,11 @@ To retrieve the version of the libzmq library actually being used, call `ZContex
 
 There are branches for the supported Zig versions:
 
-| Branch     | Zig Version | Status                                                                                                                                                                              | Comment                                     |
-|------------|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------|
-| `main`     | Zig v0.13.x | [![Unit Tests](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml)     | The latest unreleased version for Zig 0.13. |
-| `zig-0.12` | Zig v0.12.x | [![Unit Tests](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml/badge.svg?branch=zig-0.12)](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml) | The latest unreleased version for Zig 0.12. |
-| `zig-0.11` | Zig v0.11.x | [![Unit Tests](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml/badge.svg?branch=zig-0.11)](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml) | The latest unreleased version for Zig 0.11. |
+| Branch     | Zig Version | Comment                                     |
+|------------|-------------|---------------------------------------------|
+| `main`     | Zig v0.13.x | The latest unreleased version for Zig 0.13. |
+| `zig-0.12` | Zig v0.12.x | The latest unreleased version for Zig 0.12. |
+| `zig-0.11` | Zig v0.11.x | The latest unreleased version for Zig 0.11. |
 
 Please use a specific [release tag](https://github.com/nine-lives-later/zzmq/tags) for including the library into your project.
 
@@ -127,8 +127,8 @@ The library can be tested locally by running: `zig build test`.
 
 ### Contributors
 
-- [Felix Kollmann](https://github.com/fkollmann).
-- [Jacob Green](https://github.com/7Zifle).
+- [Felix Kollmann](https://github.com/fkollmann)
+- [Jacob Green](https://github.com/7Zifle)
 - Inspired by [CZMQ](http://czmq.zeromq.org) and [goczmq](https://github.com/zeromq/goczmq).
 
 ## License
