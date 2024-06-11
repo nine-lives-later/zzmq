@@ -5,11 +5,11 @@ pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
 
     _ = b.addModule("zzmq", .{
-        .root_source_file = .{ .path = "src/zzmq.zig" },
+        .root_source_file = b.path("src/zzmq.zig"),
     });
 
     const lib_test = b.addTest(.{
-        .root_source_file = .{ .path = "src/zzmq.zig" },
+        .root_source_file = b.path("src/zzmq.zig"),
         .target = target,
         .optimize = optimize,
     });

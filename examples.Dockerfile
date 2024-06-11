@@ -1,11 +1,21 @@
-FROM alpine:3.19 as builder
+FROM alpine:3.20 as zig
 
-# install Zig 0.12 from Alpine edge community repo: https://pkgs.alpinelinux.org/package/edge/community/x86_64/zig
+ARG ZIG_VERSION=0.13
+
+# install Zig 0.13 from Alpine edge community repo: https://pkgs.alpinelinux.org/package/edge/community/x86_64/zig
 RUN echo "@edge-community https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories
-RUN apk add --no-cache zig@edge-community~=0.12.0
+RUN echo "@edge-main https://dl-cdn.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories
+
+RUN apk add --no-cache zig@edge-community~=${ZIG_VERSION}.0 clang18@edge-main lld-libs@edge-main
+
+
+
+FROM zig as builder
 
 # install dependencies
-RUN apk add --no-cache zeromq-dev clang bash
+RUN apk add --no-cache bash zeromq-dev
+
+
 
 COPY . /build/
 

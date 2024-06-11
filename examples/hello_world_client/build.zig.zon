@@ -5,8 +5,8 @@
 
     .dependencies = .{
         .zzmq = .{
-            .url = "https://github.com/nine-lives-later/zzmq/archive/refs/tags/v0.2.2-zig0.12.tar.gz",
-            .hash = "122048ba004ea870098285b895c9f9dfefe33027d0982c7df0efe2a07bb6040cebea",
+            .url = "https://github.com/nine-lives-later/zzmq/archive/refs/tags/v0.2.2-zig0.13.tar.gz",
+            .hash = "12203b274a2bf7cef4a6aa59fa30b65050eb292d6421a7ff14ec7b0c8d299c7a5f2f",
         },
     },
 }
