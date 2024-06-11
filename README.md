@@ -74,7 +74,7 @@ const data = try message.data();
 Determine the specific [release tag](https://github.com/nine-lives-later/zzmq/tags) of the library to use in the project.
 
 ```sh
-zig fetch --save=zzmq 'https://github.com/nine-lives-later/zzmq/archive/refs/tags/v0.2.2-zig0.12.tar.gz'
+zig fetch --save=zzmq 'https://github.com/nine-lives-later/zzmq/archive/refs/tags/v0.2.2-zig0.13.tar.gz'
 ```
 
 It is also required to add it to the `build.zig` file:
@@ -85,9 +85,7 @@ const zzmq = b.dependency("zzmq", .{
     .optimize = optimize,
 });
 
-// Note: starting with zig 0.12 the function will be 
-//       `exe.root_module.addImport` instead of `exe.addModule`
-exe.addModule("zzmq", zzmq.module("zzmq"));
+exe.root_module.addImport("zzmq", zzmq.module("zzmq"));
 
 exe.linkSystemLibrary("zmq");
 exe.linkLibC();
@@ -117,7 +115,8 @@ There are branches for the supported Zig versions:
 
 | Branch     | Zig Version | Status                                                                                                                                                                              | Comment                                     |
 |------------|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------|
-| `main`     | Zig v0.12.x | [![Unit Tests](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml)     | The latest unreleased version for Zig 0.12. |
+| `main`     | Zig v0.13.x | [![Unit Tests](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml)     | The latest unreleased version for Zig 0.13. |
+| `zig-0.12` | Zig v0.12.x | [![Unit Tests](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml/badge.svg?branch=zig-0.12)](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml) | The latest unreleased version for Zig 0.12. |
 | `zig-0.11` | Zig v0.11.x | [![Unit Tests](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml/badge.svg?branch=zig-0.11)](https://github.com/nine-lives-later/zzmq/actions/workflows/test.yml) | The latest unreleased version for Zig 0.11. |
 
 Please use a specific [release tag](https://github.com/nine-lives-later/zzmq/tags) for including the library into your project.
@@ -128,8 +127,8 @@ The library can be tested locally by running: `zig build test`.
 
 ### Contributors
 
-- Implementation done by [Felix Kollmann](https://github.com/fkollmann).
-- Update to Zig 0.12 done by [Jacob Green](https://github.com/7Zifle).
+- [Felix Kollmann](https://github.com/fkollmann).
+- [Jacob Green](https://github.com/7Zifle).
 - Inspired by [CZMQ](http://czmq.zeromq.org) and [goczmq](https://github.com/zeromq/goczmq).
 
 ## License
