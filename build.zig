@@ -4,15 +4,28 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    _ = b.addModule("zzmq", .{
+    const mod_zmq = b.addModule("zzmq", .{
         .root_source_file = b.path("src/zzmq.zig"),
     });
+
+    // `zmq_prefix` must specified the full-path
+    const zmq_prefix = b.option([]const u8, "zmq_prefix", "zmq installed path");
+    
+    if (zmq_prefix) |p| {
+        mod_zmq.addIncludePath(.{ .cwd_relative = b.pathResolve(&[_][]const u8 { p, "zmq/include" }) } );
+        mod_zmq.addLibraryPath(.{ .cwd_relative = b.pathResolve(&[_][]const u8 { p, "zmq/lib" }) });
+    }
 
     const lib_test = b.addTest(.{
         .root_source_file = b.path("src/zzmq.zig"),
         .target = target,
         .optimize = optimize,
     });
+
+    if (zmq_prefix) |p| {
+        lib_test.addIncludePath(.{ .cwd_relative = b.pathResolve(&[_][]const u8 { p, "zmq/include" }) } );
+        lib_test.addLibraryPath(.{ .cwd_relative = b.pathResolve(&[_][]const u8 { p, "zmq/lib" }) });
+    }
 
     lib_test.linkSystemLibrary("zmq");
     lib_test.linkLibC();
